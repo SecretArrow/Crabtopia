@@ -25,26 +25,22 @@ import { formatGold, GoldIcon, PlanktonField } from "./ui";
 const NAV_ITEMS = [
   { id: "home", label: "Home", icon: "🏠" },
   { id: "arena", label: "Arena", icon: "⚔️" },
+  { id: "teams", label: "Teams", icon: "🦀" },
+  { id: "map", label: "Dive Map", icon: "🗺️" },
   { id: "mining", label: "Mining", icon: "⛏️" },
   { id: "exploration", label: "Explore", icon: "🧭" },
   { id: "breeding", label: "Breeding", icon: "🥚" },
+  { id: "nursery", label: "Nursery", icon: "🥚" },
   { id: "crafting", label: "Crafting", icon: "🔨" },
+  { id: "bazaar", label: "Bazaar", icon: "💰" },
+  { id: "hall", label: "Hall", icon: "🪵" },
   { id: "inventory", label: "Inventory", icon: "🎒" },
   { id: "codex", label: "Codex", icon: "📖" },
 ];
 
-// Secondary nav items (older sandbox features accessible via More menu on mobile)
-const SECONDARY_NAV = [
-  { id: "map", label: "Dive Map", icon: "🗺️" },
-  { id: "teams", label: "Teams", icon: "🦀" },
-  { id: "hall", label: "Hall", icon: "🪵" },
-  { id: "nursery", label: "Nursery", icon: "🥚" },
-  { id: "bazaar", label: "Bazaar", icon: "💰" },
-];
-
-// Mobile bottom nav: 5 primary items + More (which includes secondary nav)
+// Mobile bottom nav: 5 primary items + More (which holds the remaining nav items)
 const MOBILE_NAV = NAV_ITEMS.slice(0, 5);
-const MOBILE_MORE = [...NAV_ITEMS.slice(5), ...SECONDARY_NAV];
+const MOBILE_MORE = NAV_ITEMS.slice(5);
 
 function Logo({ height }: { height: number }) {
   return (
@@ -211,30 +207,6 @@ export default function GameShell() {
             );
           })}
 
-          {/* Divider + secondary nav (legacy sandbox screens) */}
-          <div className="pt-2 mt-2" style={{ borderTop: "1px solid rgba(124,245,225,0.10)" }}>
-            <div className="text-[9px] uppercase tracking-wide opacity-40 px-3 mb-1">Sandbox</div>
-            {SECONDARY_NAV.map((item) => {
-              const active = currentScreen === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setScreen(item.id)}
-                  className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
-                    active
-                      ? "text-white"
-                      : "text-white/50 hover:text-white/80 hover:bg-white/5"
-                  }`}
-                  style={{
-                    background: active ? "rgba(124,245,225,0.12)" : undefined,
-                  }}
-                >
-                  <span className="text-sm shrink-0">{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
         </nav>
 
         {/* Footer actions - shrink-0 so they never get clipped */}
