@@ -13,7 +13,7 @@ import { CONFIG } from "../engine/config";
 import { TacticCardId, Crab, Formation } from "../types";
 import CrabRenderer from "./CrabRenderer";
 import CrabCard from "./CrabCard";
-import { Modal } from "./screens/MapScreen";
+import { Modal } from "./Modal";
 
 interface Props {
   siteId: string;
