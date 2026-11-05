@@ -304,12 +304,14 @@ describe("autoPilot — full battles always end", () => {
     expect(sim.battle.winner).not.toBeNull();
     expect(sim.timeMs).toBeLessThanOrEqual(180000);
     expect(sim.battle.log.length).toBeGreaterThan(10);
-    // The pilot respects its own skills list (sanity: known skill ids).
+    // The pilot respects its own skills list (sanity: known skill ids,
+    // plus the sim's regen-tick bookkeeping entries).
     const known = new Set(
       (["warden", "reaver", "shellmender", "skitter", "pincher", "tidecaller", "bulwark", "gildclaw"] as ClassId[]).flatMap(
         (c) => getSkillsForClass(c).map((s) => s.id),
       ),
     );
+    known.add("regen_tick");
     for (const action of sim.battle.log) {
       expect(known.has(action.skillId)).toBe(true);
     }

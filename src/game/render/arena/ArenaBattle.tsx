@@ -49,6 +49,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Crab, ClassId, Formation } from "../../types";
 import {
   initBattle,
+  getSkillsForClass,
   calculateRewards,
   type ArenaBattleState,
   type ArenaSkill,
@@ -459,6 +460,30 @@ export default function ArenaBattle({
     [],
   );
 
+  // Sim events carry skill ids; resolve the full def from the actor's
+  // class skill list (the same list the sim itself uses).
+  const skillById = useCallback(
+    (actor: SimUnit, skillId: string): ArenaSkill => {
+      const def = getSkillsForClass(actor.c.classId).find(
+        (s) => s.id === skillId,
+      );
+      return (
+        def ??
+        ({
+          id: skillId,
+          name: skillId,
+          energyCost: 0,
+          cooldown: 0,
+          power: 1,
+          targetType: "enemy",
+          description: "",
+          visual: "claw",
+        } as ArenaSkill)
+      );
+    },
+    [],
+  );
+
   // ----- Effect renderer for a single visual at a target -----
   const renderVisualEffect = useCallback(
     (fx: FxInstance): React.ReactNode => {
@@ -704,7 +729,7 @@ export default function ArenaBattle({
         case "attackStart": {
           const actor = unit(ev.actorId);
           if (!actor) return;
-          const prof = profileFor(ev.skill, actor.c.classId);
+          const prof = profileFor(skillById(actor, ev.skillId), actor.c.classId);
           if (prof.shake !== "none") {
             setShaking(prof.shake);
             battleTimeout(() => setShaking(null), 420);
@@ -716,7 +741,7 @@ export default function ArenaBattle({
           const target = unit(ev.targetId);
           if (!actor || !target) return;
           hurtUntilRef.current[ev.targetId] = battleClock.elapsedMs + 350;
-          spawnImpact(actor, ev.skill, target, true);
+          spawnImpact(actor, skillById(actor, ev.skillId), target, true);
           const pos = unitPosPx(target);
           if (ev.damage > 0) {
             spawnDamageNumber(
@@ -741,7 +766,7 @@ export default function ArenaBattle({
           return;
         }
         case "whiff": {
-          const target = unit(ev.targetId);
+          const target = ev.targetId ? unit(ev.targetId) : undefined;
           if (!target) return;
           spawnFloatingText("MISS", unitPosPx(target), "#FFFFFF");
           return;
@@ -750,7 +775,7 @@ export default function ArenaBattle({
           const actor = unit(ev.actorId);
           const target = unit(ev.targetId);
           if (!actor || !target) return;
-          const skill = ev.skill;
+          const skill = skillById(actor, ev.skillId);
           const prof = profileFor(skill, actor.c.classId);
           const fxElement =
             profileFxElement(prof, actor.c.element) ?? undefined;
@@ -770,7 +795,7 @@ export default function ArenaBattle({
           setProjectiles((prev) => [
             ...prev,
             {
-              id: `proj-${ev.projectileId}`,
+              id: `proj-${ev.id}`,
               fx: prof.projectile?.fx ?? prof.fx,
               from,
               to,
@@ -804,9 +829,10 @@ export default function ArenaBattle({
         case "cast": {
           const actor = unit(ev.actorId);
           if (!actor) return;
+          const skill = skillById(actor, ev.skillId);
           for (const tid of ev.targetIds) {
             const target = unit(tid);
-            if (target) spawnImpact(actor, ev.skill, target, true);
+            if (target) spawnImpact(actor, skill, target, true);
           }
           return;
         }
@@ -871,6 +897,7 @@ export default function ArenaBattle({
     [
       simById,
       profileFor,
+      skillById,
       battleTimeout,
       spawnImpact,
       spawnDamageNumber,
@@ -992,6 +1019,10 @@ export default function ArenaBattle({
   const elapsedSec = Math.floor(sim.timeMs / 1000);
   const timerText = `⏱ ${Math.floor(elapsedSec / 60)}:${String(elapsedSec % 60).padStart(2, "0")}`;
 
+  /** Frozen solid right now? (sim status with time remaining). */
+  const isFrozenUnit = (u: SimUnit): boolean =>
+    u.c.statuses.some((s) => s.id === "freeze" && s.durationMs > 0);
+
   /** Pose for one unit, derived from live sim state each frame. */
   const poseFor = (u: SimUnit): CrabPose => {
     const c = u.c;
@@ -999,7 +1030,7 @@ export default function ArenaBattle({
       return "victory";
     }
     if (c.isDefeated) return "defeated";
-    if (u.ccFrozen) return "idle"; // frozen solid — the tint carries it
+    if (isFrozenUnit(u)) return "idle"; // frozen solid — the tint carries it
     if (u.pending) {
       const prof = profileFor(u.pending.skill, c.classId);
       return POSE_FOR_ANIM[prof.attackerAnim] ?? "casting";
@@ -1124,7 +1155,7 @@ export default function ArenaBattle({
                   facing={u.facing === 1 ? "right" : "left"}
                   showTombstone={showTombstone}
                   speedScale={strideScale}
-                  frozen={u.ccFrozen}
+                  frozen={isFrozenUnit(u)}
                   tombstoneSinceMs={tombAt}
                 />
               </div>

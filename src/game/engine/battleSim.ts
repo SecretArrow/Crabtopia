@@ -184,10 +184,10 @@ export interface SimProjectile {
 
 export type SimEvent =
   | { type: "attackStart"; at: number; actorId: string; skillId: string }
-  | { type: "strike"; at: number; actorId: string; skillId: string; targetId: string; damage: number; defeated: boolean }
-  | { type: "whiff"; at: number; actorId: string; skillId: string }
+  | { type: "strike"; at: number; actorId: string; skillId: string; targetId: string; damage: number; comboMult: number; defeated: boolean }
+  | { type: "whiff"; at: number; actorId: string; skillId: string; targetId: string | null }
   | { type: "projectileSpawn"; at: number; id: number; actorId: string; targetId: string; skillId: string; travelMs: number }
-  | { type: "projectileHit"; at: number; id: number; actorId: string; targetId: string; skillId: string; damage: number; defeated: boolean }
+  | { type: "projectileHit"; at: number; id: number; actorId: string; targetId: string; skillId: string; damage: number; comboMult: number; defeated: boolean }
   | { type: "projectileFizzle"; at: number; id: number; targetId: string }
   | { type: "cast"; at: number; actorId: string; skillId: string; targetIds: string[] }
   | { type: "heal"; at: number; actorId: string; skillId: string; targetId: string; amount: number }
@@ -590,13 +590,15 @@ export function cleanseTarget(
     target.c.statuses = target.c.statuses.filter((s) => s.id !== newest.id);
   }
   target.ccImmuneUntil = Math.max(target.ccImmuneUntil, now + CLEANSE_IMMUNITY_MS);
-  sim.events.push({
-    type: "cleansed",
-    at: now,
-    actorId: source.c.crabId,
-    targetId: target.c.crabId,
-    removed,
-  });
+  if (removed !== null) {
+    sim.events.push({
+      type: "cleansed",
+      at: now,
+      actorId: source.c.crabId,
+      targetId: target.c.crabId,
+      removed,
+    });
+  }
   return removed;
 }
 
@@ -739,6 +741,7 @@ function strikeDamage(
       targetId: t.crabId,
       skillId: skill.id,
       damage: Math.round(rawDmg),
+      comboMult,
       defeated,
     });
   } else {
@@ -749,6 +752,7 @@ function strikeDamage(
       skillId: skill.id,
       targetId: t.crabId,
       damage: Math.round(rawDmg),
+      comboMult,
       defeated,
     });
   }
@@ -956,7 +960,7 @@ function resolvePending(sim: SimState, unit: SimUnit): void {
       ? sim.byId.get(pending.primaryTargetId)
       : undefined;
     if (!target || target.c.isDefeated) {
-      sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id });
+      sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id, targetId: pending.primaryTargetId });
     } else {
       strikeDamage(sim, unit, skill, target, acc);
       if (skill.effect && skill.effect.applyTo === "target") {
@@ -976,7 +980,7 @@ function resolvePending(sim: SimState, unit: SimUnit): void {
         ? sim.byId.get(pending.primaryTargetId)
         : undefined;
       if (!target || target.c.isDefeated) {
-        sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id });
+        sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id, targetId: pending.primaryTargetId });
         break;
       }
       const dist = distanceBetween(unit, target);
@@ -1011,7 +1015,7 @@ function resolvePending(sim: SimState, unit: SimUnit): void {
         (u) => u.c.side === enemySide && !u.c.isDefeated,
       );
       if (targets.length === 0) {
-        sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id });
+        sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id, targetId: null });
         break;
       }
       for (const t of targets) strikeDamage(sim, unit, skill, t, acc);
@@ -1031,7 +1035,7 @@ function resolvePending(sim: SimState, unit: SimUnit): void {
         ? sim.byId.get(pending.primaryTargetId)
         : undefined;
       if (!target || target.c.isDefeated) {
-        sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id });
+        sim.events.push({ type: "whiff", at: now, actorId: actor.crabId, skillId: skill.id, targetId: pending.primaryTargetId });
         break;
       }
       if (skill.effect?.status === "shield") {
@@ -1411,15 +1415,16 @@ function tickUnit(sim: SimState, unit: SimUnit): void {
   const stunned = now < unit.hitstunUntil;
 
   if (!committed) {
-    unit.state = frozen
-      ? "idle"
-      : recovering
-        ? "recover"
-        : stunned
-          ? "hitstun"
-          : unit.state === "windup" || unit.state === "cast"
-            ? "idle"
-            : unit.state;
+    if (frozen) unit.state = "idle";
+    else if (recovering) unit.state = "recover";
+    else if (stunned) unit.state = "hitstun";
+    else if (
+      unit.state === "windup" ||
+      unit.state === "cast" ||
+      unit.state === "recover"
+    ) {
+      unit.state = "idle";
+    }
   }
 
   // Decisions + action starts (never while frozen/committed/stunned).
