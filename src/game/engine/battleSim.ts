@@ -1348,6 +1348,62 @@ function moveUnit(sim: SimState, unit: SimUnit, dtMs: number): void {
   }
 }
 
+/**
+ * Standing personal-space constraint, applied once per tick after every
+ * unit has moved. moveUnit's separation only resolves the MOVER against
+ * where its neighbours were at move time, so several attackers parking
+ * at contact range around the same target converge into a stack over a
+ * few ticks — nobody owns the pairwise distance once everyone arrives.
+ * This pass owns it: every living pair is kept at least SEPARATION
+ * apart, the correction split evenly between both units.
+ *
+ * Deterministic by construction: pairs are visited in fixed slot order
+ * (sim.units order), corrections are purely positional (no RNG, no
+ * velocity/state changes — a corrected unit does not gain or lose
+ * speedNow, so poses never fake locomotion), and a few relaxation
+ * passes let a cluster settle into a ring instead of a pile. Contact
+ * geometry is compatible: melee stop distance (9.5) already exceeds
+ * SEPARATION (6.5), so a ring around a target satisfies both.
+ */
+function resolveSeparation(sim: SimState): void {
+  for (let pass = 0; pass < 3; pass++) {
+    let corrected = false;
+    for (let i = 0; i < sim.units.length; i++) {
+      const a = sim.units[i];
+      if (a.c.isDefeated) continue;
+      for (let j = i + 1; j < sim.units.length; j++) {
+        const b = sim.units[j];
+        if (b.c.isDefeated) continue;
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let d = Math.hypot(dx, dy);
+        if (d >= SEPARATION) continue;
+        const push = (SEPARATION - d) / 2;
+        if (d < 1e-6) {
+          // Exactly stacked: separate along the pair's spawn axis
+          // (deterministic), falling back to the field's x axis.
+          dx = b.spawnX - a.spawnX;
+          dy = b.spawnY - a.spawnY;
+          d = Math.hypot(dx, dy);
+          if (d < 1e-6) {
+            dx = 1;
+            dy = 0;
+            d = 1;
+          }
+        }
+        const ux = dx / d;
+        const uy = dy / d;
+        a.x = Math.min(FIELD.maxX, Math.max(FIELD.minX, a.x - ux * push));
+        a.y = Math.min(FIELD.maxY, Math.max(FIELD.minY, a.y - uy * push));
+        b.x = Math.min(FIELD.maxX, Math.max(FIELD.minX, b.x + ux * push));
+        b.y = Math.min(FIELD.maxY, Math.max(FIELD.minY, b.y + uy * push));
+        corrected = true;
+      }
+    }
+    if (!corrected) break;
+  }
+}
+
 // ============================================================================
 // PER-TICK PROCESSING
 // ============================================================================
@@ -1554,6 +1610,10 @@ function tick(sim: SimState): void {
     tickUnit(sim, unit);
     checkBattleEnd(sim);
   }
+  // Standing separation: after all movement for this tick, restore the
+  // pairwise personal-space minimum (a scrum rings its target instead
+  // of stacking onto it). Positional only — no events, no RNG.
+  resolveSeparation(sim);
   if (!sim.finished) {
     // Projectiles resolve in spawn order.
     for (const p of [...sim.projectiles]) {
