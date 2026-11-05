@@ -98,7 +98,9 @@ interface GameState {
   hireCrab: (listingId: string) => Crab | null;
 
   // breeding ops
-  breed: (aId: string, bId: string) => Egg | null;
+  // `legendaryChanceBonus` carries the Inventory's Legendary Lure buff
+  // (additive legendary-part chance for this one breed, 0..1).
+  breed: (aId: string, bId: string, legendaryChanceBonus?: number) => Egg | null;
   hatchEggNow: (eggId: string) => void;
 
   // bazaar ops
@@ -1025,7 +1027,7 @@ export const useGame = create<GameState>()(
         return crab;
       },
 
-      breed: (aId, bId) => {
+      breed: (aId, bId, legendaryChanceBonus = 0) => {
         const player = get().player;
         if (!player) return null;
         const a = player.crabs.find((c) => c.id === aId);
@@ -1041,7 +1043,7 @@ export const useGame = create<GameState>()(
           get().pushToast({ title: `Need ${cost} GOLD to breed.`, variant: "error" });
           return null;
         }
-        const egg = breedCrabs(a, b, player.id);
+        const egg = breedCrabs(a, b, player.id, undefined, legendaryChanceBonus);
         // increment breed counts
         const crabs = player.crabs.map((c) =>
           c.id === aId || c.id === bId ? { ...c, breedCount: c.breedCount + 1, activity: "nursery" as const } : c

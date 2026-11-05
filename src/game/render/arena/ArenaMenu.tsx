@@ -47,7 +47,7 @@ const BATTLE_LOG_KEY = "crabtopia_battle_log_v1";
 const ACTIVITIES: { id: string; label: string; icon: string; screen: string }[] = [
   { id: "mining", label: "Mining", icon: "⛏️", screen: "mining" },
   { id: "exploration", label: "Explore", icon: "🧭", screen: "exploration" },
-  { id: "breeding", label: "Breeding", icon: "🥚", screen: "breeding" },
+  { id: "nursery", label: "Nursery", icon: "🥚", screen: "nursery" },
   { id: "crafting", label: "Crafting", icon: "🔧", screen: "crafting" },
   { id: "inventory", label: "Inventory", icon: "🎒", screen: "inventory" },
 ];

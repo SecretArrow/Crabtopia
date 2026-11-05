@@ -15,7 +15,6 @@ import CodexScreen from "./screens/CodexScreen";
 import ArenaController from "./arena/ArenaController";
 import MiningScreen from "./activities/MiningScreen";
 import ExplorationScreen from "./activities/ExplorationScreen";
-import BreedingScreen from "./activities/BreedingScreen";
 import CraftingScreen from "./activities/CraftingScreen";
 import InventoryScreen from "./activities/InventoryScreen";
 import NotificationCenterModal from "./NotificationCenterModal";
@@ -29,7 +28,8 @@ const NAV_ITEMS = [
   { id: "map", label: "Dive Map", icon: "🗺️" },
   { id: "mining", label: "Mining", icon: "⛏️" },
   { id: "exploration", label: "Explore", icon: "🧭" },
-  { id: "breeding", label: "Breeding", icon: "🥚" },
+  // Breeding lives in the Nursery (its single canonical surface) — there
+  // is deliberately no separate "Breeding" nav entry or screen.
   { id: "nursery", label: "Nursery", icon: "🥚" },
   { id: "crafting", label: "Crafting", icon: "🔨" },
   { id: "bazaar", label: "Bazaar", icon: "💰" },
@@ -92,8 +92,12 @@ export default function GameShell() {
         return <MiningScreen />;
       case "exploration":
         return <ExplorationScreen />;
+      // Legacy alias: saves persisted before the consolidation may still
+      // carry currentScreen="breeding" — it lands on the Nursery, the one
+      // canonical breeding surface.
       case "breeding":
-        return <BreedingScreen />;
+      case "nursery":
+        return <NurseryScreen />;
       case "crafting":
         return <CraftingScreen />;
       case "inventory":
@@ -104,8 +108,6 @@ export default function GameShell() {
         return <TeamsScreen />;
       case "hall":
         return <HallScreen />;
-      case "nursery":
-        return <NurseryScreen />;
       case "bazaar":
         return <BazaarScreen />;
       case "codex":

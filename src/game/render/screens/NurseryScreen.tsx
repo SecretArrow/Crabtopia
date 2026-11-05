@@ -1,4 +1,7 @@
-// Crabtopia - Nursery screen (breeding & eggs)
+// Crabtopia - Nursery screen: the game's ONE canonical breeding surface
+// (parent picking, gene + element odds, egg creation) plus everything the
+// eggs need afterwards — incubation, hatching, selling, recent hatchlings.
+// There is deliberately no second breeding screen/flow anywhere else.
 "use client";
 
 import { useState } from "react";
@@ -24,7 +27,18 @@ import { Crab, BodyPartSlot } from "../../types";
 import CrabRenderer from "../CrabRenderer";
 import CrabCard from "../CrabCard";
 import ElementBadge from "../ElementBadge";
-import { Modal } from "./MapScreen";
+import { Modal } from "../Modal";
+import { useLocalStorage } from "../useLocalStorage";
+import {
+  BUFFS_KEY,
+  DEFAULT_BUFFS,
+  type BuffsState,
+} from "../useLocalStorage";
+import {
+  COMBINE_CHANCE,
+  elementOf,
+  previewBreedingElements,
+} from "../../engine/elements";
 import { BODY_PART_SLOTS, getGeneVariant, RARITY_COLORS } from "../../content/bodyparts";
 import { BREEDS } from "../../content/breeds";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -70,6 +84,12 @@ export default function NurseryScreen() {
   const hatchEggNow = useGame((s) => s.hatchEggNow);
   const listEggInBazaar = useGame((s) => s.listEggInBazaar);
   const setScreen = useGame((s) => s.setScreen);
+  // Shared consumable buffs (Inventory writes, screens consume). The
+  // Legendary Lure's "+% legendary chance for next breed" is honoured
+  // here — this screen is the game's ONE breeding surface.
+  const [buffs, setBuffs] = useLocalStorage<BuffsState>(BUFFS_KEY, DEFAULT_BUFFS);
+  const lure = buffs.legendaryChance;
+  const lureActive = !!lure && lure.charges > 0;
 
   const [parentA, setParentA] = useState<string | null>(null);
   const [parentB, setParentB] = useState<string | null>(null);
@@ -98,11 +118,41 @@ export default function NurseryScreen() {
 
   const handleBreed = () => {
     if (!crabA || !crabB) return;
-    breed(crabA.id, crabB.id);
+    const egg = breed(
+      crabA.id,
+      crabB.id,
+      lureActive ? lure.percent / 100 : undefined,
+    );
+    if (egg && lureActive) {
+      // Consume one lure charge only when the breed actually happened.
+      setBuffs((prev) => {
+        if (!prev.legendaryChance) return prev;
+        const charges = prev.legendaryChance.charges - 1;
+        if (charges <= 0) {
+          const next = { ...prev };
+          delete next.legendaryChance;
+          return next;
+        }
+        return {
+          ...prev,
+          legendaryChance: {
+            percent: prev.legendaryChance.percent,
+            charges,
+          },
+        };
+      });
+    }
     setParentA(null);
     setParentB(null);
     setShowOdds(false);
   };
+
+  // Child element possibilities for the picked pair (recipe fusion /
+  // inheritance / rare special mutation — engine/elements.ts).
+  const elementPreview =
+    crabA && crabB
+      ? previewBreedingElements(elementOf(crabA), elementOf(crabB))
+      : null;
 
   // CTA disabled state + tooltip reason
   let ctaDisabled = true;
@@ -188,6 +238,12 @@ export default function NurseryScreen() {
                 Full odds
               </GlowButton>
             )}
+            {lureActive && (
+              <div className="text-[10px] font-bold" style={{ color: "#FFD166" }}>
+                ★ Legendary Lure active: +{lure.percent}% legendary chance on this breed
+                {lure.charges > 1 ? ` (${lure.charges} charges left)` : ""}
+              </div>
+            )}
           </div>
 
           {/* Parent B */}
@@ -206,6 +262,43 @@ export default function NurseryScreen() {
           />
         </div>
       </GlassPanel>
+
+      {/* Child element possibilities (once both parents picked) */}
+      {elementPreview && crabA && crabB && (
+        <GlassPanel className="p-4">
+          <div data-testid="breeding-element-preview">
+            <div className="mb-2 text-[10px] uppercase tracking-wide text-white/50">
+              Child Element Possibilities
+            </div>
+            <div className="space-y-2 text-xs text-white/75">
+              {elementPreview.recipe && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span>
+                    Combination recipe ({Math.round(COMBINE_CHANCE * 100)}%
+                    chance):
+                  </span>
+                  <ElementBadge element={elementPreview.recipe} />
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span>Inheritance / base components:</span>
+                {elementPreview.inherit.map((el) => (
+                  <ElementBadge key={el} element={el} />
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span>
+                  Rare special mutation (
+                  {Math.round(elementPreview.mutationChance * 100)}%):
+                </span>
+                {elementPreview.mutationPool.map((el) => (
+                  <ElementBadge key={el} element={el} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </GlassPanel>
+      )}
 
       {/* Gene odds preview (inline once both parents picked) */}
       {crabA && crabB && <GeneOddsPreview crabA={crabA} crabB={crabB} />}

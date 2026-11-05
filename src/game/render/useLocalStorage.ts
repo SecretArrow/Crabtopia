@@ -52,9 +52,6 @@ export const MINING_KEY = "crabtopia_mining_v1";
 /** Exploration state: tickets, last-reset timestamp, map seed, revealed tiles. */
 export const EXPLORATION_KEY = "crabtopia_exploration_v1";
 
-/** Breeding state: last breed finish timestamp (cooldown). */
-export const BREEDING_KEY = "crabtopia_breeding_v1";
-
 /** Temporary buffs (drop rate, legendary chance, trap debuff). */
 export const BUFFS_KEY = "crabtopia_buffs_v1";
 
@@ -78,10 +75,6 @@ export interface ExplorationState {
   revealed: Record<number, boolean>; // tileIndex -> revealed
 }
 
-export interface BreedingState {
-  lastBreedAt: number; // ms timestamp of last breed (for cooldown)
-}
-
 export interface BuffsState {
   // Lucky Charm: +drop rate for next N explorations
   dropRate?: { percent: number; charges: number };
@@ -97,8 +90,6 @@ export const MAX_MINING_ENERGY = 10;
 export const MINING_REGEN_MS = 5 * 60 * 1000; // 1 energy per 5 min
 export const MAX_EXPLORATION_TICKETS = 3;
 export const EXPLORATION_DAY_MS = 24 * 60 * 60 * 1000;
-export const BREED_COOLDOWN_MS = 30 * 1000; // 30s (playable shortcut)
-export const BREED_COST = 200;
 
 export const DEFAULT_INVENTORY: InventoryState = {
   materials: {},
@@ -116,10 +107,6 @@ export const DEFAULT_EXPLORATION: ExplorationState = {
   lastResetAt: Date.now(),
   mapSeed: Math.floor(Math.random() * 1_000_000),
   revealed: {},
-};
-
-export const DEFAULT_BREEDING: BreedingState = {
-  lastBreedAt: 0,
 };
 
 export const DEFAULT_BUFFS: BuffsState = {};

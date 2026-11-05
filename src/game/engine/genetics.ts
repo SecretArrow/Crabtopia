@@ -116,10 +116,23 @@ export function computeGeneOdds(a: Crab, b: Crab): GeneOdds[] {
   });
 }
 
-// Actually breed two crabs into an egg
-export function breedCrabs(a: Crab, b: Crab, ownerId: string, seed?: number): Egg {
+// Actually breed two crabs into an egg.
+// `legendaryChanceBonus` (additive, 0..1) is the Legendary Lure consumable:
+// using the item in the Inventory promises "+X% legendary chance for next
+// breed", and this is the single place that promise is honoured.
+export function breedCrabs(
+  a: Crab,
+  b: Crab,
+  ownerId: string,
+  seed?: number,
+  legendaryChanceBonus = 0,
+): Egg {
   const s = seed ?? Math.floor(Math.random() * 2 ** 31);
   const rng = mulberry32(s);
+  const legendaryPartChance = Math.min(
+    1,
+    CONFIG.legendaryPartChance + Math.max(0, legendaryChanceBonus),
+  );
 
   const genePreview: Record<BodyPartSlot, GeneSlot> = {} as Record<
     BodyPartSlot,
@@ -145,7 +158,7 @@ export function breedCrabs(a: Crab, b: Crab, ownerId: string, seed?: number): Eg
       continue;
     }
     // legendary chance
-    if (rng() < CONFIG.legendaryPartChance) {
+    if (rng() < legendaryPartChance) {
       const leg = LEGENDARY_GENES[slot];
       const pool = GENE_POOL[slot];
       genePreview[slot] = {
