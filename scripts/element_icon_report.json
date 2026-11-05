@@ -1,0 +1,220 @@
+{
+  "icons": {
+    "vulkara": {
+      "detected": true,
+      "center": [
+        800.5,
+        805.5
+      ],
+      "radius": 692.5,
+      "source": "media-generation-element-vulkara-0-d7ffb530-740d-4e72-8351-060dc36ff9c4.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/vulkara.png"
+    },
+    "nerala": {
+      "detected": true,
+      "center": [
+        800.5,
+        805.5
+      ],
+      "radius": 670.5,
+      "source": "media-generation-element-nerala-0-fe191623-4e1f-4610-af1c-d1760d4eb77b.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/nerala.png"
+    },
+    "bentala": {
+      "detected": true,
+      "center": [
+        801.0,
+        799.0
+      ],
+      "radius": 703.0,
+      "source": "media-generation-element-bentala-0-1f72d522-b704-4dec-b0f2-f993363a2147.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/bentala.png"
+    },
+    "lintara": {
+      "detected": true,
+      "center": [
+        801.5,
+        801.5
+      ],
+      "radius": 691.5,
+      "source": "media-generation-element-lintara-0-d49fc280-bd40-420d-a1e5-984b171a643e.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/lintara.png"
+    },
+    "anila": {
+      "detected": true,
+      "center": [
+        801.0,
+        804.5
+      ],
+      "radius": 628.5,
+      "source": "media-generation-element-anila-0-ae12b7ba-4a53-4825-9d66-f13cfea320f7.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/anila.png"
+    },
+    "himara": {
+      "detected": true,
+      "center": [
+        800.0,
+        808.0
+      ],
+      "radius": 644.0,
+      "source": "media-generation-element-himara-0-de0b0ac4-95bd-4207-858c-65d42b114520.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/himara.png"
+    },
+    "rimba": {
+      "detected": true,
+      "center": [
+        800.5,
+        803.5
+      ],
+      "radius": 761.5,
+      "source": "media-generation-element-rimba-0-d97bb28d-3ca0-417c-9d90-1b1b4ab3b71e.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/rimba.png"
+    },
+    "magmara": {
+      "detected": true,
+      "center": [
+        800.5,
+        801.5
+      ],
+      "radius": 732.5,
+      "source": "media-generation-element-magmara-0-41979e91-c749-4478-b87d-9c0d8eb6ee33.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/magmara.png"
+    },
+    "taufan": {
+      "detected": true,
+      "center": [
+        800.0,
+        801.5
+      ],
+      "radius": 682.5,
+      "source": "media-generation-element-taufan-0-99c283dd-4585-4ace-aad8-4a057b765be1.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/taufan.png"
+    },
+    "dentuma": {
+      "detected": true,
+      "center": [
+        801.5,
+        802.5
+      ],
+      "radius": 724.5,
+      "source": "media-generation-element-dentuma-0-239874bb-0e64-4a1b-9ffc-5b4163ceef7a.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/dentuma.png"
+    },
+    "vapora": {
+      "detected": true,
+      "center": [
+        801.0,
+        803.5
+      ],
+      "radius": 676.5,
+      "source": "media-generation-element-vapora-0-6d30526c-1961-4b98-af75-00054cc7ea22.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/vapora.png"
+    },
+    "lodara": {
+      "detected": true,
+      "center": [
+        800.0,
+        802.5
+      ],
+      "radius": 767.5,
+      "source": "media-generation-element-lodara-0-39314207-1e73-4a6c-b32e-6befa68ee608.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/lodara.png"
+    },
+    "pulvara": {
+      "detected": true,
+      "center": [
+        800.5,
+        801.5
+      ],
+      "radius": 664.5,
+      "source": "media-generation-element-pulvara-0-fa70425c-fb05-45d1-ae8e-b787ad6257c9.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/pulvara.png"
+    },
+    "terika": {
+      "detected": true,
+      "center": [
+        800.5,
+        803.5
+      ],
+      "radius": 630.5,
+      "source": "media-generation-element-terika-0-53fa0c50-712b-4541-af50-0e7ecb947269.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/terika.png"
+    },
+    "obsidara": {
+      "detected": true,
+      "center": [
+        801.0,
+        805.5
+      ],
+      "radius": 639.0,
+      "source": "media-generation-element-obsidara-0-eb9a4313-af26-4455-8827-5fc9cfd07900.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/obsidara.png"
+    },
+    "prismara": {
+      "detected": true,
+      "center": [
+        807.0,
+        804.5
+      ],
+      "radius": 697.5,
+      "source": "media-generation-element-prismara-0-42cf6510-12f3-4555-908f-659fcaa83455.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/prismara.png"
+    },
+    "andhakara": {
+      "detected": true,
+      "center": [
+        800.0,
+        800.0
+      ],
+      "radius": 742.0,
+      "source": "media-generation-element-andhakara-0-4eead864-6700-4905-8b89-c27e851141b4.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/andhakara.png"
+    },
+    "waja": {
+      "detected": true,
+      "center": [
+        801.0,
+        812.5
+      ],
+      "radius": 660.0,
+      "source": "media-generation-element-waja-0-c4aab84b-16e5-46e4-837d-4523c0a4c311.webp",
+      "cornerAlphaMax": 0,
+      "centerAlpha": 255,
+      "outputFile": "public/art/elements/waja.png"
+    }
+  }
+}

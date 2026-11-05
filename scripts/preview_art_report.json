@@ -1,0 +1,35 @@
+{
+  "portraits": {
+    "pincher-coral.png": {
+      "file": "public/art/crabs/pincher-coral.png"
+    },
+    "warden-frost.png": {
+      "file": "public/art/crabs/warden-frost.png"
+    },
+    "gildclaw-cinder.png": {
+      "file": "public/art/crabs/gildclaw-cinder.png"
+    },
+    "reaver-cinder.png": {
+      "file": "public/art/crabs/reaver-cinder.png"
+    },
+    "shellmender-mangrove.png": {
+      "file": "public/art/crabs/shellmender-mangrove.png"
+    },
+    "legendary-glow.png": {
+      "file": "public/art/crabs/legendary-glow.png"
+    },
+    "bulwark-coral.png": {
+      "file": "public/art/crabs/bulwark-coral.png"
+    },
+    "tidecaller-moon.png": {
+      "file": "public/art/crabs/tidecaller-moon.png"
+    },
+    "skitter-storm.png": {
+      "file": "public/art/crabs/skitter-storm.png"
+    },
+    "rookie-kelp.png": {
+      "file": "public/art/crabs/rookie-kelp.png"
+    }
+  },
+  "count": 10
+}

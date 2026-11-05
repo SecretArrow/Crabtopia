@@ -1,0 +1,235 @@
+// Unit tests for battlefield position rules (arenaEngine rows + battle.ts).
+// Rules under test (documented in README "Battlefield position rules"):
+//  - melee single-target skills only reach the frontmost living enemy row
+//  - ranged single-target skills reach any row
+//  - frontline guard: front row takes ×0.9 damage from single-target skills
+//  - backline protection: back row takes ×0.8 while its front row stands
+//  - AoE ignores position factors
+import { describe, it, expect } from "vitest";
+import {
+  applySkill,
+  getSkillsForClass,
+  initBattle,
+  legalEnemyTargets,
+  pickTargetForSkill,
+  positionDamageFactor,
+  skillRange,
+} from "../../src/game/engine/arenaEngine";
+import { simulateBattle } from "../../src/game/engine/battle";
+import { generateCrab } from "../../src/game/engine/crabs";
+import type { ClassId, Crab, Formation } from "../../src/game/types";
+
+function mkCrab(classId: ClassId, seed: number, stats?: Partial<Crab["stats"]>): Crab {
+  const c = generateCrab({ classId, seed, level: 5, ownerId: "player" });
+  return stats ? { ...c, stats: { ...c.stats, ...stats } } : c;
+}
+
+const BIG = { hp: 1000, attack: 50, defense: 10, speed: 10, skill: 50 };
+
+function five(classId: ClassId, baseSeed: number): Crab[] {
+  return [0, 1, 2, 3, 4].map((i) => mkCrab(classId, baseSeed + i, BIG));
+}
+
+describe("formation rows in initBattle", () => {
+  it("assigns rows from the supplied formation", () => {
+    const player = five("reaver", 100);
+    const enemy = five("bulwark", 200);
+    const formation: Formation = {
+      front: [player[0].id],
+      mid: [player[1].id, player[2].id],
+      back: [player[3].id, player[4].id],
+    };
+    const state = initBattle(player, enemy, 42, { playerFormation: formation });
+    expect(state.player.map((c) => c.row)).toEqual([
+      "front",
+      "mid",
+      "mid",
+      "back",
+      "back",
+    ]);
+  });
+
+  it("falls back to legacy rows (0-2 front, 3-4 back) without a formation", () => {
+    const state = initBattle(five("reaver", 100), five("bulwark", 200), 42);
+    expect(state.player.map((c) => c.row)).toEqual([
+      "front",
+      "front",
+      "front",
+      "back",
+      "back",
+    ]);
+  });
+});
+
+describe("skillRange", () => {
+  it("classifies claw strikes and claw specials as melee", () => {
+    expect(skillRange(getSkillsForClass("reaver")[0])).toBe("melee");
+    expect(skillRange(getSkillsForClass("reaver")[1])).toBe("melee");
+    expect(skillRange(getSkillsForClass("pincher")[1])).toBe("melee");
+  });
+
+  it("classifies lightning casts as ranged and AoE specials as aoe", () => {
+    expect(skillRange(getSkillsForClass("warden")[1])).toBe("ranged");
+    expect(skillRange(getSkillsForClass("tidecaller")[1])).toBe("aoe");
+    expect(skillRange(getSkillsForClass("bulwark")[1])).toBe("aoe");
+    expect(skillRange(getSkillsForClass("shellmender")[1])).toBe("support");
+  });
+});
+
+describe("melee reach & target picking", () => {
+  function setup() {
+    const player = [mkCrab("reaver", 1, BIG), mkCrab("warden", 2, BIG)];
+    // Enemy: tank in front (huge HP), squishy in back (tiny HP).
+    const tank = mkCrab("bulwark", 3, { ...BIG, hp: 5000 });
+    const squishy = mkCrab("shellmender", 4, { ...BIG, hp: 30 });
+    const mid = mkCrab("pincher", 5, { ...BIG, hp: 800 });
+    const enemy = [tank, mid, squishy];
+    const enemyFormation: Formation = {
+      front: [tank.id],
+      mid: [mid.id],
+      back: [squishy.id],
+    };
+    const state = initBattle(player, enemy, 7, { enemyFormation });
+    return { state, tank, squishy, mid };
+  }
+
+  it("melee skills can only target the frontmost living row", () => {
+    const { state, tank } = setup();
+    const actor = state.player[0];
+    const claw = getSkillsForClass("reaver")[0];
+    const legal = legalEnemyTargets(state, actor, claw);
+    expect(legal.map((c) => c.crabId)).toEqual([tank.id]);
+    expect(pickTargetForSkill(state, actor, claw)?.crabId).toBe(tank.id);
+  });
+
+  it("ranged skills may target the low-HP back row directly", () => {
+    const { state, squishy } = setup();
+    // Wound the back-row healer so it is unambiguously the lowest-HP target.
+    const squishyC = state.enemy.find((c) => c.crabId === squishy.id)!;
+    squishyC.hp = 5;
+    const actor = state.player[1]; // warden
+    const bolt = getSkillsForClass("warden")[1];
+    expect(pickTargetForSkill(state, actor, bolt)?.crabId).toBe(squishy.id);
+  });
+
+  it("when the front row falls, melee reach extends to the mid row", () => {
+    const { state, mid } = setup();
+    const front = state.enemy.find((c) => c.row === "front")!;
+    front.isDefeated = true;
+    front.hp = 0;
+    const actor = state.player[0];
+    const claw = getSkillsForClass("reaver")[0];
+    const legal = legalEnemyTargets(state, actor, claw);
+    expect(legal.map((c) => c.crabId)).toEqual([mid.id]);
+  });
+});
+
+describe("positionDamageFactor", () => {
+  function setup() {
+    const player = five("reaver", 300);
+    const enemy = five("bulwark", 400);
+    const formation: Formation = {
+      front: [enemy[0].id],
+      mid: [enemy[1].id],
+      back: [enemy[2].id, enemy[3].id, enemy[4].id],
+    };
+    const state = initBattle(player, enemy, 9, { enemyFormation: formation });
+    const byRow = (row: string) => state.enemy.find((c) => c.row === row)!;
+    return { state, byRow };
+  }
+  const claw = getSkillsForClass("reaver")[0];
+  const aoe = getSkillsForClass("tidecaller")[1];
+
+  it("front row takes ×0.9 from single-target skills", () => {
+    const { state, byRow } = setup();
+    expect(positionDamageFactor(state, byRow("front"), claw)).toBeCloseTo(0.9);
+  });
+
+  it("mid row is neutral", () => {
+    const { state, byRow } = setup();
+    expect(positionDamageFactor(state, byRow("mid"), claw)).toBe(1);
+  });
+
+  it("back row takes ×0.8 while its front stands, ×1 once the front falls", () => {
+    const { state, byRow } = setup();
+    expect(positionDamageFactor(state, byRow("back"), claw)).toBeCloseTo(0.8);
+    const front = byRow("front");
+    front.isDefeated = true;
+    front.hp = 0;
+    expect(positionDamageFactor(state, byRow("back"), claw)).toBe(1);
+  });
+
+  it("AoE ignores position factors entirely", () => {
+    const { state, byRow } = setup();
+    expect(positionDamageFactor(state, byRow("front"), aoe)).toBe(1);
+    expect(positionDamageFactor(state, byRow("back"), aoe)).toBe(1);
+  });
+
+  it("applySkill deals less damage to a guarded front target than an exposed one", () => {
+    const mkState = (targetRow: "front" | "back") => {
+      const player = [mkCrab("reaver", 1, BIG)];
+      const target = mkCrab("bulwark", 2, { ...BIG, hp: 100000 });
+      const filler = mkCrab("bulwark", 3, { ...BIG, hp: 100000 });
+      const enemyFormation: Formation =
+        targetRow === "front"
+          ? { front: [target.id], mid: [], back: [filler.id] }
+          : { front: [filler.id], mid: [], back: [target.id] };
+      const state = initBattle(player, [target, filler], 123, { enemyFormation });
+      if (targetRow === "back") {
+        // Remove the front guard so only the row factor differs.
+        const front = state.enemy.find((c) => c.row === "front")!;
+        front.isDefeated = true;
+        front.hp = 0;
+      }
+      return { state, targetId: target.id };
+    };
+    const a = mkState("front");
+    const b = mkState("back");
+    const actorA = a.state.player[0];
+    const actorB = b.state.player[0];
+    const targetA = a.state.enemy.find((c) => c.crabId === a.targetId)!;
+    const targetB = b.state.enemy.find((c) => c.crabId === b.targetId)!;
+    const dmgA = applySkill(a.state, actorA, getSkillsForClass("reaver")[0], [targetA]).damage ?? 0;
+    const dmgB = applySkill(b.state, actorB, getSkillsForClass("reaver")[0], [targetB]).damage ?? 0;
+    expect(dmgA).toBeGreaterThan(0);
+    expect(dmgB).toBeGreaterThan(0);
+    expect(dmgA).toBeLessThan(dmgB);
+    expect(dmgA / dmgB).toBeGreaterThan(0.8);
+    expect(dmgA / dmgB).toBeLessThan(1.0);
+  });
+});
+
+describe("battle.ts (raid sim) formation targeting", () => {
+  it("melee raiders cannot bypass a living front line to hit the back row", () => {
+    const tank = mkCrab("bulwark", 21, { hp: 100000, attack: 5, defense: 50, speed: 1, skill: 5 });
+    const squishy = mkCrab("shellmender", 22, { hp: 40, attack: 5, defense: 0, speed: 1, skill: 5 });
+    const fillers = [23, 24, 25].map((s) =>
+      mkCrab("bulwark", s, { hp: 100000, attack: 5, defense: 50, speed: 1, skill: 5 })
+    );
+    const defenderCrabs = [tank, ...fillers, squishy];
+    const formation: Formation = {
+      front: [tank.id, fillers[0].id, fillers[1].id, fillers[2].id],
+      mid: [],
+      back: [squishy.id],
+    };
+    const raiders = [31, 32, 33, 34, 35].map((s) =>
+      mkCrab("reaver", s, { hp: 5000, attack: 60, defense: 10, speed: 20, skill: 10 })
+    );
+    const result = simulateBattle(
+      { crabs: raiders, name: "Raiders" },
+      { crabs: defenderCrabs, name: "Defenders", formation },
+      555
+    );
+    const damageEvents = result.events.filter(
+      (e) => e.actorSide === "raider" && typeof e.damage === "number"
+    );
+    expect(damageEvents.length).toBeGreaterThan(0);
+    // Every raider damage event must land on a front-row crab: the squishy
+    // back-row healer is unreachable for melee while the front stands, and
+    // the front (100k HP) cannot fall inside the short sim.
+    for (const e of damageEvents) {
+      expect(e.targetId).not.toBe(squishy.id);
+      expect(formation.front).toContain(e.targetId);
+    }
+  });
+});

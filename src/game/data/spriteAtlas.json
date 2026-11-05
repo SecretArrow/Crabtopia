@@ -1,0 +1,1027 @@
+{
+  "version": 1,
+  "sheets": {
+    "gildclaw": {
+      "src": "/art/sprites/gildclaw.png",
+      "frameWidth": 400,
+      "frameHeight": 400,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            8,
+            9,
+            10,
+            11
+          ],
+          "fps": 12,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            9,
+            10,
+            9,
+            10
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "3": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            8,
+            9,
+            10
+          ],
+          "fps": 10,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "defense": {
+          "frames": [
+            8
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            12,
+            13
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            9
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            12
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            14,
+            15
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            13
+          ],
+          "fps": 1,
+          "loop": "once"
+        }
+      }
+    },
+    "warden": {
+      "src": "/art/sprites/warden.png",
+      "frameWidth": 559,
+      "frameHeight": 429,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            9
+          ],
+          "fps": 10,
+          "loop": "once",
+          "events": {
+            "0": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            7,
+            9,
+            7,
+            9
+          ],
+          "fps": 13,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "3": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            9
+          ],
+          "fps": 9,
+          "loop": "once",
+          "events": {
+            "0": "hitMoment"
+          }
+        },
+        "defense": {
+          "frames": [
+            13
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            15
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            9
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            10
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            11
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            14
+          ],
+          "fps": 1,
+          "loop": "once"
+        }
+      }
+    },
+    "reaver": {
+      "src": "/art/sprites/reaver.png",
+      "frameWidth": 491,
+      "frameHeight": 350,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            9,
+            10
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            8,
+            9,
+            10
+          ],
+          "fps": 13,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            10
+          ],
+          "fps": 9,
+          "loop": "once",
+          "events": {
+            "0": "hitMoment"
+          }
+        },
+        "defense": {
+          "frames": [
+            11
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            12,
+            13
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            9
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            12
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            3,
+            1
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            14,
+            15
+          ],
+          "fps": 6,
+          "loop": "once"
+        }
+      }
+    },
+    "pincher": {
+      "src": "/art/sprites/pincher.png",
+      "frameWidth": 467,
+      "frameHeight": 357,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            9,
+            10,
+            11
+          ],
+          "fps": 12,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            9,
+            10,
+            9,
+            10
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "3": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            9,
+            10
+          ],
+          "fps": 10,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "defense": {
+          "frames": [
+            9
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            12,
+            13
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            10
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            12
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            15
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            14
+          ],
+          "fps": 1,
+          "loop": "once"
+        }
+      }
+    },
+    "bulwark": {
+      "src": "/art/sprites/bulwark.png",
+      "frameWidth": 404,
+      "frameHeight": 384,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            8,
+            9,
+            10
+          ],
+          "fps": 12,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            9,
+            10,
+            9,
+            10
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "3": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            8,
+            9,
+            10
+          ],
+          "fps": 10,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "defense": {
+          "frames": [
+            11
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            12
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            9
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            12
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            14,
+            15
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            13
+          ],
+          "fps": 1,
+          "loop": "once"
+        }
+      }
+    },
+    "skitter": {
+      "src": "/art/sprites/skitter.png",
+      "frameWidth": 416,
+      "frameHeight": 391,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            6,
+            7,
+            5
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            6,
+            7,
+            5
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            10
+          ],
+          "fps": 12,
+          "loop": "once",
+          "events": {
+            "0": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            7,
+            10,
+            7,
+            10
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "3": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            8
+          ],
+          "fps": 10,
+          "loop": "once",
+          "events": {
+            "0": "hitMoment"
+          }
+        },
+        "defense": {
+          "frames": [
+            11
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            12
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            10
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            12
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            14,
+            15
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            13
+          ],
+          "fps": 1,
+          "loop": "once"
+        }
+      }
+    },
+    "tidecaller": {
+      "src": "/art/sprites/tidecaller.png",
+      "frameWidth": 442,
+      "frameHeight": 372,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            8,
+            9,
+            10
+          ],
+          "fps": 12,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            9,
+            10,
+            9,
+            10
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "3": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            8,
+            9,
+            10
+          ],
+          "fps": 10,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "defense": {
+          "frames": [
+            11
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            12
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            9
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            12
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            14,
+            15
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            13
+          ],
+          "fps": 1,
+          "loop": "once"
+        }
+      }
+    },
+    "shellmender": {
+      "src": "/art/sprites/shellmender.png",
+      "frameWidth": 410,
+      "frameHeight": 381,
+      "cols": 4,
+      "rows": 4,
+      "animations": {
+        "idle": {
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "walk": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 8,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "attack": {
+          "frames": [
+            8,
+            9,
+            10
+          ],
+          "fps": 12,
+          "loop": "once",
+          "events": {
+            "2": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            9,
+            10,
+            9,
+            10
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "3": "hitMoment"
+          }
+        },
+        "skill": {
+          "frames": [
+            11
+          ],
+          "fps": 9,
+          "loop": "once"
+        },
+        "defense": {
+          "frames": [
+            8
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "hit": {
+          "frames": [
+            12
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            9
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            12
+          ],
+          "fps": 1,
+          "loop": "once"
+        },
+        "victory": {
+          "frames": [
+            14,
+            15
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "death": {
+          "frames": [
+            13
+          ],
+          "fps": 1,
+          "loop": "once"
+        }
+      }
+    }
+  },
+  "fx": {
+    "slash": {
+      "src": "/art/sprites/fx/slash.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 18
+    },
+    "spark": {
+      "src": "/art/sprites/fx/spark.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 16
+    },
+    "lightning": {
+      "src": "/art/sprites/fx/lightning.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 14
+    },
+    "splash": {
+      "src": "/art/sprites/fx/splash.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 14
+    },
+    "heal": {
+      "src": "/art/sprites/fx/heal.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 10
+    },
+    "explosion": {
+      "src": "/art/sprites/fx/explosion.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 12
+    },
+    "shield": {
+      "src": "/art/sprites/fx/shield.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 12
+    },
+    "levelup": {
+      "src": "/art/sprites/fx/levelup.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 10
+    },
+    "poison": {
+      "src": "/art/sprites/fx/poison.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 12
+    },
+    "ice": {
+      "src": "/art/sprites/fx/ice.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 14
+    },
+    "dark": {
+      "src": "/art/sprites/fx/dark.png",
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frames": 8,
+      "fps": 10
+    }
+  }
+}

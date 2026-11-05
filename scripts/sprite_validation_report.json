@@ -1,0 +1,1841 @@
+{
+  "sheets": {
+    "gildclaw": {
+      "frameWidth": 400,
+      "frameHeight": 400,
+      "minCoveragePct": 26.44,
+      "maxCoveragePct": 35.55,
+      "flaggedFrames": [
+        10,
+        11,
+        14,
+        15
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 29.64,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            54,
+            68,
+            359,
+            371
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 30.01,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            47,
+            63,
+            379,
+            371
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 32.53,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            36,
+            45,
+            386,
+            372
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 29.69,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            39,
+            70,
+            343,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 27.46,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            71,
+            48,
+            340,
+            362
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 26.44,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            67,
+            48,
+            344,
+            369
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 26.47,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            56,
+            49,
+            333,
+            370
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 26.62,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            43,
+            46,
+            319,
+            368
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 27.87,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            40,
+            70,
+            368,
+            333
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 33.33,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            6,
+            47,
+            391,
+            341
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 33.07,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            23,
+            41,
+            400,
+            400
+          ],
+          "flags": [
+            "bbox_touches_edge"
+          ],
+          "suspicious": true
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 27.94,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            38,
+            48,
+            350,
+            400
+          ],
+          "flags": [
+            "bbox_touches_edge"
+          ],
+          "suspicious": true
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 29.71,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            73,
+            27,
+            348,
+            340
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 30.52,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            23,
+            50,
+            374,
+            333
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 35.55,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            20,
+            0,
+            378,
+            355
+          ],
+          "flags": [
+            "bbox_touches_edge"
+          ],
+          "suspicious": true
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 34.87,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            17,
+            0,
+            360,
+            329
+          ],
+          "flags": [
+            "bbox_touches_edge"
+          ],
+          "suspicious": true
+        }
+      ],
+      "backgroundSampled": [
+        189,
+        226,
+        252
+      ],
+      "sourceSize": [
+        1600,
+        1600
+      ],
+      "outputFile": "public/art/sprites/gildclaw.png",
+      "cornerAlphaMax": 0
+    },
+    "warden": {
+      "frameWidth": 559,
+      "frameHeight": 429,
+      "minCoveragePct": 26.1,
+      "maxCoveragePct": 38.52,
+      "flaggedFrames": [],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 33.71,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            60,
+            33,
+            498,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 34.62,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            60,
+            19,
+            499,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 33.34,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            63,
+            36,
+            495,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 33.27,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            62,
+            31,
+            496,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 33.29,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            63,
+            41,
+            496,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 33.3,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            63,
+            40,
+            496,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 33.39,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            62,
+            40,
+            496,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 33.49,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            61,
+            40,
+            497,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 38.52,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            21,
+            77,
+            537,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 31.68,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            64,
+            551,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 29.96,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            83,
+            57,
+            475,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 33.59,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            76,
+            8,
+            483,
+            421
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 30.18,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            96,
+            12,
+            463,
+            417
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 31.79,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            106,
+            34,
+            453,
+            417
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 26.1,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            107,
+            87,
+            452,
+            417
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 32.88,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            103,
+            52,
+            456,
+            417
+          ],
+          "flags": [],
+          "suspicious": false
+        }
+      ],
+      "backgroundSampled": [
+        192,
+        243,
+        248
+      ],
+      "sourceSize": [
+        2236,
+        1716
+      ],
+      "outputFile": "public/art/sprites/warden.png",
+      "cornerAlphaMax": 0
+    },
+    "reaver": {
+      "frameWidth": 491,
+      "frameHeight": 350,
+      "minCoveragePct": 31.61,
+      "maxCoveragePct": 54.16,
+      "flaggedFrames": [],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 43.23,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            34,
+            12,
+            457,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 40.97,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            40,
+            8,
+            451,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 41.8,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            38,
+            17,
+            452,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 42.0,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            36,
+            18,
+            454,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 39.15,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            35,
+            42,
+            456,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 38.34,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            37,
+            46,
+            454,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 38.43,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            35,
+            48,
+            455,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 38.6,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            33,
+            50,
+            458,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 45.05,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            24,
+            19,
+            467,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 49.85,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            16,
+            36,
+            475,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 54.16,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            38,
+            483,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 41.99,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            28,
+            43,
+            463,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 37.43,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            49,
+            26,
+            441,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 31.61,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            72,
+            51,
+            418,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 36.47,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            36,
+            67,
+            454,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 31.8,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            25,
+            112,
+            465,
+            342
+          ],
+          "flags": [],
+          "suspicious": false
+        }
+      ],
+      "backgroundSampled": [
+        189,
+        242,
+        249
+      ],
+      "sourceSize": [
+        1964,
+        1400
+      ],
+      "outputFile": "public/art/sprites/reaver.png",
+      "cornerAlphaMax": 0
+    },
+    "pincher": {
+      "frameWidth": 467,
+      "frameHeight": 357,
+      "minCoveragePct": 25.27,
+      "maxCoveragePct": 40.78,
+      "flaggedFrames": [],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 40.33,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            21,
+            22,
+            445,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 40.78,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            26,
+            19,
+            440,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 39.86,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            23,
+            23,
+            443,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 39.71,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            24,
+            23,
+            443,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 39.43,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            25,
+            29,
+            442,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 39.48,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            25,
+            31,
+            442,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 38.97,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            26,
+            31,
+            440,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 39.35,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            25,
+            30,
+            442,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 39.75,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            18,
+            75,
+            448,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 38.7,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            11,
+            52,
+            455,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 38.21,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            57,
+            459,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 38.99,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            21,
+            36,
+            446,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 32.55,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            47,
+            78,
+            420,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 29.66,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            26,
+            107,
+            441,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 25.27,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            11,
+            146,
+            456,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 36.67,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            42,
+            8,
+            425,
+            349
+          ],
+          "flags": [],
+          "suspicious": false
+        }
+      ],
+      "backgroundSampled": [
+        192,
+        243,
+        250
+      ],
+      "sourceSize": [
+        1868,
+        1428
+      ],
+      "outputFile": "public/art/sprites/pincher.png",
+      "cornerAlphaMax": 0
+    },
+    "bulwark": {
+      "frameWidth": 404,
+      "frameHeight": 384,
+      "minCoveragePct": 38.73,
+      "maxCoveragePct": 47.67,
+      "flaggedFrames": [],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 44.02,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            29,
+            40,
+            375,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 44.28,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            30,
+            39,
+            373,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 44.08,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            31,
+            41,
+            372,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 44.91,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            25,
+            39,
+            379,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 42.39,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            20,
+            47,
+            384,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 42.38,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            14,
+            52,
+            389,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 41.7,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            16,
+            53,
+            387,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 44.11,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            9,
+            52,
+            395,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 42.56,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            28,
+            46,
+            376,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 41.39,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            16,
+            63,
+            388,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 40.58,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            16,
+            66,
+            388,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 38.73,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            49,
+            44,
+            355,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 45.11,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            20,
+            35,
+            384,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 38.99,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            105,
+            396,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 47.67,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            16,
+            8,
+            387,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 45.57,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            15,
+            9,
+            388,
+            376
+          ],
+          "flags": [],
+          "suspicious": false
+        }
+      ],
+      "backgroundSampled": [
+        246,
+        241,
+        237
+      ],
+      "sourceSize": [
+        1616,
+        1536
+      ],
+      "outputFile": "public/art/sprites/bulwark.png",
+      "cornerAlphaMax": 0
+    },
+    "skitter": {
+      "frameWidth": 416,
+      "frameHeight": 391,
+      "minCoveragePct": 28.18,
+      "maxCoveragePct": 36.46,
+      "flaggedFrames": [],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 33.16,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            40,
+            110,
+            376,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 36.28,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            35,
+            91,
+            380,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 34.18,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            38,
+            106,
+            378,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 36.46,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            35,
+            91,
+            380,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 35.54,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            17,
+            154,
+            399,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 35.13,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            14,
+            160,
+            401,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 35.04,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            24,
+            163,
+            391,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 35.06,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            24,
+            161,
+            391,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 32.96,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            16,
+            143,
+            399,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 32.22,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            23,
+            140,
+            393,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 32.66,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            153,
+            408,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 29.46,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            54,
+            131,
+            362,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 30.37,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            34,
+            155,
+            381,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 28.18,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            20,
+            195,
+            395,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 35.41,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            30,
+            30,
+            385,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 32.87,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            30,
+            8,
+            385,
+            383
+          ],
+          "flags": [],
+          "suspicious": false
+        }
+      ],
+      "backgroundSampled": [
+        250,
+        243,
+        227
+      ],
+      "sourceSize": [
+        1664,
+        1564
+      ],
+      "outputFile": "public/art/sprites/skitter.png",
+      "cornerAlphaMax": 0
+    },
+    "tidecaller": {
+      "frameWidth": 442,
+      "frameHeight": 372,
+      "minCoveragePct": 32.92,
+      "maxCoveragePct": 43.01,
+      "flaggedFrames": [],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 40.95,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            28,
+            38,
+            413,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 41.18,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            28,
+            36,
+            413,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 41.2,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            29,
+            35,
+            413,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 41.16,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            28,
+            36,
+            413,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 39.83,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            30,
+            45,
+            411,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 40.64,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            29,
+            45,
+            412,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 41.1,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            30,
+            39,
+            412,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 40.54,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            33,
+            46,
+            408,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 41.5,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            32,
+            42,
+            410,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 42.42,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            28,
+            53,
+            414,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 41.6,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            47,
+            434,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 33.05,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            74,
+            47,
+            368,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 41.69,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            30,
+            28,
+            411,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 32.92,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            30,
+            106,
+            411,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 43.01,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            31,
+            8,
+            411,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 38.46,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            32,
+            19,
+            409,
+            364
+          ],
+          "flags": [],
+          "suspicious": false
+        }
+      ],
+      "backgroundSampled": [
+        211,
+        232,
+        253
+      ],
+      "sourceSize": [
+        1768,
+        1488
+      ],
+      "outputFile": "public/art/sprites/tidecaller.png",
+      "cornerAlphaMax": 0
+    },
+    "shellmender": {
+      "frameWidth": 410,
+      "frameHeight": 381,
+      "minCoveragePct": 39.13,
+      "maxCoveragePct": 48.13,
+      "flaggedFrames": [],
+      "frames": [
+        {
+          "index": 0,
+          "alphaCoveragePct": 43.95,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            33,
+            18,
+            377,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 1,
+          "alphaCoveragePct": 44.47,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            34,
+            9,
+            375,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 2,
+          "alphaCoveragePct": 44.37,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            35,
+            8,
+            375,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 3,
+          "alphaCoveragePct": 44.27,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            33,
+            15,
+            377,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 4,
+          "alphaCoveragePct": 44.62,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            23,
+            30,
+            387,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 5,
+          "alphaCoveragePct": 44.7,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            23,
+            30,
+            387,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 6,
+          "alphaCoveragePct": 44.55,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            23,
+            30,
+            386,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 7,
+          "alphaCoveragePct": 48.13,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            21,
+            402,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 8,
+          "alphaCoveragePct": 46.0,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            17,
+            33,
+            392,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 9,
+          "alphaCoveragePct": 46.95,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            13,
+            34,
+            396,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 10,
+          "alphaCoveragePct": 44.52,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            38,
+            401,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 11,
+          "alphaCoveragePct": 39.13,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            57,
+            9,
+            352,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 12,
+          "alphaCoveragePct": 47.14,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            18,
+            9,
+            391,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 13,
+          "alphaCoveragePct": 39.47,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            36,
+            81,
+            373,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 14,
+          "alphaCoveragePct": 44.82,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            9,
+            18,
+            400,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        },
+        {
+          "index": 15,
+          "alphaCoveragePct": 43.38,
+          "cornerAlphaMax": 0,
+          "bbox": [
+            8,
+            9,
+            401,
+            373
+          ],
+          "flags": [],
+          "suspicious": false
+        }
+      ],
+      "backgroundSampled": [
+        235,
+        227,
+        216
+      ],
+      "sourceSize": [
+        1640,
+        1524
+      ],
+      "outputFile": "public/art/sprites/shellmender.png",
+      "cornerAlphaMax": 0
+    }
+  }
+}

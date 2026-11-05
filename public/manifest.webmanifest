@@ -1,0 +1,18 @@
+{
+  "name": "Crabtopia",
+  "short_name": "Crabtopia",
+  "description": "Glow-Tide Storybook — dive, plunder, breed, battle.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A1B3D",
+  "theme_color": "#0A1B3D",
+  "icons": [
+    {
+      "src": "/art/ui/app-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
