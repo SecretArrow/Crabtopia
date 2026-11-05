@@ -1,11 +1,11 @@
-// Unit tests for the arena AutoPilot (engine/autoPilot.ts) — the AI
-// that plays BOTH teams in the full auto battler: target legality
-// under the position rules, the documented target priorities
-// (finisher → element-weak → lowest HP), healing below the threshold,
-// support/AoE choices, determinism, and full-battle termination.
+// Unit tests for the sim pilot (engine/autoPilot.ts decideSimAction) —
+// the AI that plays BOTH teams in the real-time auto battler: target
+// legality under the position rules, the documented target priorities
+// (finisher → element-weak → lowest HP), role behaviour (assassin
+// flanks, warden hunts the carry, mender cleanses then heals),
+// support/AoE choices, the freeze gate, determinism.
 import { describe, it, expect } from "vitest";
 import {
-  applySkill,
   getSkillsForClass,
   initBattle,
   legalEnemyTargets,
@@ -13,7 +13,13 @@ import {
   type ArenaBattleState,
   type Combatant,
 } from "../../src/game/engine/arenaEngine";
-import { decideAction, HEAL_THRESHOLD } from "../../src/game/engine/autoPilot";
+import {
+  createSim,
+  runSimToCompletion,
+  type SimState,
+  type SimUnit,
+} from "../../src/game/engine/battleSim";
+import { decideSimAction, HEAL_THRESHOLD } from "../../src/game/engine/autoPilot";
 import { generateCrab } from "../../src/game/engine/crabs";
 import type { ClassId, ElementId, FactionId } from "../../src/game/types";
 import type { RowId } from "../../src/game/engine/formation";
@@ -65,13 +71,29 @@ function stateOf(player: Combatant[], enemy: Combatant[]): ArenaBattleState {
   };
 }
 
+function simOf(player: Combatant[], enemy: Combatant[]): SimState {
+  const state = stateOf(player, enemy);
+  const spawns: Record<string, { x: number; y: number }> = {};
+  for (const c of [...player, ...enemy]) {
+    spawns[c.crabId] = {
+      x: c.side === "player" ? 20 : 80,
+      y: 20 + c.slot * 15,
+    };
+  }
+  return createSim(state, spawns);
+}
+
+function unitOf(sim: SimState, c: Combatant): SimUnit {
+  return sim.units.find((u) => u.c === c)!;
+}
+
 describe("autoPilot — target legality (position rules)", () => {
   it("melee actors only ever target the frontmost living row", () => {
     const actor = combatant("reaver", "player", 0, "front", { energy: 10 });
     const front = combatant("bulwark", "enemy", 0, "front");
     const back = combatant("tidecaller", "enemy", 1, "back", { hp: 10 });
-    const state = stateOf([actor], [front, back]);
-    const decision = decideAction(state, actor);
+    const sim = simOf([actor], [front, back]);
+    const decision = decideSimAction(sim, unitOf(sim, actor));
     expect(decision).not.toBeNull();
     // Even though the back crab is nearly dead, melee cannot reach it.
     if (decision!.skill.targetType === "enemy") {
@@ -93,11 +115,11 @@ describe("autoPilot — target legality (position rules)", () => {
         const enemies = rows.map((r, i) =>
           combatant("bulwark", "enemy", i, r, { hp: 60 + i * 40 }),
         );
-        const state = stateOf([actor], enemies);
-        const decision = decideAction(state, actor);
+        const sim = simOf([actor], enemies);
+        const decision = decideSimAction(sim, unitOf(sim, actor));
         expect(decision, `${cls} vs ${rows}`).not.toBeNull();
         if (decision!.skill.targetType === "enemy") {
-          const legal = legalEnemyTargets(state, actor, decision!.skill);
+          const legal = legalEnemyTargets(sim.battle, actor, decision!.skill);
           for (const t of decision!.targets) {
             expect(legal).toContain(t);
           }
@@ -111,14 +133,16 @@ describe("autoPilot — target legality (position rules)", () => {
 
 describe("autoPilot — target priorities", () => {
   it("finishers beat everything: a killable target is chosen", () => {
+    // Energy 4: the class special (cost 4) is affordable, the 5-cost
+    // debuff sigil is not — so the damage branch is what decides.
     const actor = combatant("reaver", "player", 0, "front", {
-      energy: 10,
+      energy: 4,
       attack: 60,
     });
     const dying = combatant("pincher", "enemy", 0, "front", { hp: 8 });
     const healthy = combatant("bulwark", "enemy", 1, "front", { hp: 400 });
-    const state = stateOf([actor], [healthy, dying]);
-    const decision = decideAction(state, actor);
+    const sim = simOf([actor], [healthy, dying]);
+    const decision = decideSimAction(sim, unitOf(sim, actor));
     expect(decision!.reason).toBe("damage");
     expect(decision!.targets).toEqual([dying]);
   });
@@ -138,8 +162,8 @@ describe("autoPilot — target priorities", () => {
       hp: 120,
       element: "bentala",
     });
-    const state = stateOf([actor], [weak, neutralLow]);
-    const decision = decideAction(state, actor);
+    const sim = simOf([actor], [weak, neutralLow]);
+    const decision = decideSimAction(sim, unitOf(sim, actor));
     expect(decision!.targets[0]).toBe(weak);
   });
 
@@ -149,13 +173,58 @@ describe("autoPilot — target priorities", () => {
       combatant("bulwark", "enemy", 0, "front"),
       combatant("pincher", "enemy", 1, "back", { hp: 30 }),
     ];
-    const state = stateOf([actor], enemies);
-    const a = decideAction(state, actor);
-    const b = decideAction(state, actor);
+    const sim = simOf([actor], enemies);
+    const a = decideSimAction(sim, unitOf(sim, actor));
+    const b = decideSimAction(sim, unitOf(sim, actor));
     expect(a?.skill.id).toBe(b?.skill.id);
     expect(a?.targets.map((t) => t.crabId)).toEqual(
       b?.targets.map((t) => t.crabId),
     );
+  });
+});
+
+describe("autoPilot — role behaviour", () => {
+  it("skitter flanks: it hunts the back row, ignoring the front tank", () => {
+    // Energy 4: special affordable, 5-cost sigil not — pure damage pick.
+    const actor = combatant("skitter", "player", 0, "mid", { energy: 4 });
+    const tank = combatant("bulwark", "enemy", 0, "front", { hp: 900 });
+    const backline = combatant("tidecaller", "enemy", 1, "back", { hp: 60 });
+    const sim = simOf([actor], [tank, backline]);
+    const decision = decideSimAction(sim, unitOf(sim, actor));
+    expect(decision!.reason).toBe("damage");
+    expect(decision!.targets).toEqual([backline]);
+  });
+
+  it("warden aims its freeze at the enemy carry (highest attack)", () => {
+    const actor = combatant("warden", "player", 0, "back", { energy: 10 });
+    const meatshield = combatant("bulwark", "enemy", 0, "front", {
+      attack: 5,
+    });
+    const carry = combatant("tidecaller", "enemy", 1, "back", {
+      attack: 80,
+    });
+    const sim = simOf([actor], [meatshield, carry]);
+    const decision = decideSimAction(sim, unitOf(sim, actor));
+    expect(decision!.skill.effect?.status).toBe("freeze");
+    expect(decision!.targets[0]).toBe(carry);
+  });
+
+  it("shellmender cleanses a hard-CC'd ally before anything else", () => {
+    const mender = combatant("shellmender", "player", 0, "back", {
+      energy: 10,
+    });
+    const frozenAlly = combatant("bulwark", "player", 1, "front");
+    frozenAlly.statuses.push({
+      id: "freeze",
+      durationMs: 2000,
+      magnitude: 0,
+    });
+    const enemy = combatant("reaver", "enemy", 0, "front");
+    const sim = simOf([mender, frozenAlly], [enemy]);
+    const decision = decideSimAction(sim, unitOf(sim, mender));
+    expect(decision!.reason).toBe("cleanse");
+    expect(decision!.skill.id).toBe("mend_pearl");
+    expect(decision!.targets).toEqual([frozenAlly]);
   });
 });
 
@@ -167,8 +236,8 @@ describe("autoPilot — heal & support & AoE", () => {
     const hurt = combatant("bulwark", "player", 1, "front");
     hurt.hp = Math.floor(hurt.maxHp * (HEAL_THRESHOLD - 0.15));
     const enemy = combatant("reaver", "enemy", 0, "front");
-    const state = stateOf([mender, hurt], [enemy]);
-    const decision = decideAction(state, mender);
+    const sim = simOf([mender, hurt], [enemy]);
+    const decision = decideSimAction(sim, unitOf(sim, mender));
     expect(decision!.reason).toBe("heal");
     expect(decision!.targets).toEqual([hurt]);
   });
@@ -179,8 +248,8 @@ describe("autoPilot — heal & support & AoE", () => {
     });
     const ally = combatant("bulwark", "player", 1, "front");
     const enemy = combatant("reaver", "enemy", 0, "front");
-    const state = stateOf([mender, ally], [enemy]);
-    const decision = decideAction(state, mender);
+    const sim = simOf([mender, ally], [enemy]);
+    const decision = decideSimAction(sim, unitOf(sim, mender));
     expect(decision!.reason).not.toBe("heal");
   });
 
@@ -188,8 +257,8 @@ describe("autoPilot — heal & support & AoE", () => {
     const tank = combatant("bulwark", "player", 0, "front", { energy: 10 });
     const ally = combatant("pincher", "player", 1, "mid");
     const enemy = combatant("reaver", "enemy", 0, "front");
-    const state = stateOf([tank, ally], [enemy]);
-    const decision = decideAction(state, tank);
+    const sim = simOf([tank, ally], [enemy]);
+    const decision = decideSimAction(sim, unitOf(sim, tank));
     expect(decision!.reason).toBe("support");
     expect(decision!.skill.id).toBe("tide_sigil");
   });
@@ -198,55 +267,14 @@ describe("autoPilot — heal & support & AoE", () => {
     const mage = combatant("tidecaller", "player", 0, "back", { energy: 10 });
     const e1 = combatant("reaver", "enemy", 0, "front");
     const e2 = combatant("pincher", "enemy", 1, "front");
-    const state = stateOf([mage], [e1, e2]);
-    const decision = decideAction(state, mage);
+    const sim = simOf([mage], [e1, e2]);
+    const decision = decideSimAction(sim, unitOf(sim, mage));
     expect(decision!.reason).toBe("aoe");
     expect(decision!.targets.length).toBe(2);
   });
 });
 
 describe("autoPilot — full battles always end", () => {
-  function runPilotedBattle(
-    playerCrabs: ReturnType<typeof generateCrab>[],
-    enemyCrabs: ReturnType<typeof generateCrab>[],
-  ): ArenaBattleState {
-    const state = initBattle(playerCrabs, enemyCrabs, 42);
-    const alive = (side: "player" | "enemy") =>
-      (side === "player" ? state.player : state.enemy).some(
-        (c) => !c.isDefeated,
-      );
-    let rounds = 0;
-    while (alive("player") && alive("enemy") && rounds < 30) {
-      rounds += 1;
-      state.turn += 1;
-      const order = [...state.player, ...state.enemy]
-        .filter((c) => !c.isDefeated)
-        .sort((a, b) => b.speed - a.speed);
-      for (const actor of order) {
-        if (actor.isDefeated) continue;
-        if (!alive("player") || !alive("enemy")) break;
-        const decision = decideAction(state, actor);
-        if (decision) applySkill(state, actor, decision.skill, decision.targets);
-      }
-      // End-of-round lite: energy regen + cooldown ticks.
-      for (const c of [...state.player, ...state.enemy]) {
-        c.energy = Math.min(c.maxEnergy, c.energy + 2);
-        for (const k of Object.keys(c.cooldowns)) {
-          if (c.cooldowns[k] > 0) c.cooldowns[k] -= 1;
-        }
-      }
-    }
-    if (!alive("enemy")) state.winner = "player";
-    else if (!alive("player")) state.winner = "enemy";
-    else {
-      // Round-cap tiebreak, mirroring runBattle: more HP remaining wins.
-      const hp = (list: Combatant[]) =>
-        list.reduce((s, c) => s + (c.isDefeated ? 0 : c.hp), 0);
-      state.winner = hp(state.player) >= hp(state.enemy) ? "player" : "enemy";
-    }
-    return state;
-  }
-
   it("resolves mixed teams, including combined-element crabs", () => {
     const mk = (faction: FactionId, cls: ClassId, seed: number) =>
       generateCrab({ faction, classId: cls, level: 12, seed });
@@ -264,46 +292,48 @@ describe("autoPilot — full battles always end", () => {
       mk("mangrove", "pincher", 24),
       mk("stormwake", "gildclaw", 25),
     ];
-    const state = runPilotedBattle(player, enemy);
-    expect(state.winner).not.toBeNull();
-    expect(state.turn).toBeLessThanOrEqual(30);
-    expect(state.log.length).toBeGreaterThan(10);
+    const state = initBattle(player, enemy, 42);
+    const spawns: Record<string, { x: number; y: number }> = {};
+    for (const c of [...state.player, ...state.enemy]) {
+      spawns[c.crabId] = {
+        x: c.side === "player" ? 20 : 80,
+        y: 20 + c.slot * 15,
+      };
+    }
+    const sim = runSimToCompletion(createSim(state, spawns));
+    expect(sim.battle.winner).not.toBeNull();
+    expect(sim.timeMs).toBeLessThanOrEqual(180000);
+    expect(sim.battle.log.length).toBeGreaterThan(10);
     // The pilot respects its own skills list (sanity: known skill ids).
     const known = new Set(
       (["warden", "reaver", "shellmender", "skitter", "pincher", "tidecaller", "bulwark", "gildclaw"] as ClassId[]).flatMap(
         (c) => getSkillsForClass(c).map((s) => s.id),
       ),
     );
-    for (const action of state.log) {
+    for (const action of sim.battle.log) {
       expect(known.has(action.skillId)).toBe(true);
     }
   });
 });
 
 describe("autoPilot — incapacitation gate (freeze)", () => {
-  it("decideAction returns null for a frozen crab (defense-in-depth)", () => {
-    // A frozen crab must NOT receive a real decision from the AutoPilot,
-    // even if a caller forgets to consumeFreeze first. This is the
-    // defense-in-depth guard that ensures frozen crabs never attack.
+  it("decideSimAction returns null for a frozen crab (defense-in-depth)", () => {
+    // A frozen crab must NOT receive a real decision from the pilot,
+    // even if a caller forgets to check the freeze first.
     const actor = combatant("reaver", "player", 0, "front", { energy: 10 });
     const enemy = combatant("bulwark", "enemy", 0, "front", { hp: 100 });
-    const state = stateOf([actor], [enemy]);
-    // Freeze the actor for 2 rounds.
-    actor.statuses.push({ id: "freeze", roundsRemaining: 2, magnitude: 0 });
-    const decision = decideAction(state, actor);
-    expect(decision).toBeNull();
+    actor.statuses.push({ id: "freeze", durationMs: 2000, magnitude: 0 });
+    const sim = simOf([actor], [enemy]);
+    expect(decideSimAction(sim, unitOf(sim, actor))).toBeNull();
   });
 
-  it("decideAction resumes real decisions once freeze is consumed", () => {
-    // After the freeze status is cleared, the pilot decides normally again.
+  it("decideSimAction resumes real decisions once freeze is gone", () => {
     const actor = combatant("reaver", "player", 0, "front", { energy: 10 });
     const enemy = combatant("bulwark", "enemy", 0, "front", { hp: 100 });
-    const state = stateOf([actor], [enemy]);
-    actor.statuses.push({ id: "freeze", roundsRemaining: 2, magnitude: 0 });
-    expect(decideAction(state, actor)).toBeNull();
-    // Consume the freeze (mirrors consumeFreeze in ArenaBattle).
+    const sim = simOf([actor], [enemy]);
+    actor.statuses.push({ id: "freeze", durationMs: 2000, magnitude: 0 });
+    expect(decideSimAction(sim, unitOf(sim, actor))).toBeNull();
     actor.statuses = [];
-    const decision = decideAction(state, actor);
-    expect(decision).not.toBeNull();
+    expect(decideSimAction(sim, unitOf(sim, actor))).not.toBeNull();
   });
 });

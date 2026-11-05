@@ -1,22 +1,54 @@
-// Unit tests for the Crabtopia arena battle engine (arenaEngine.ts).
-// Pure logic testing — no React rendering.
+// Unit tests for the Crabtopia arena battle engine (arenaEngine.ts) +
+// its real-time simulator (battleSim.ts). Pure logic — no React.
+// The turn-based resolver was replaced by the fixed-timestep sim in
+// Phase 2; battle-level assertions (determinism, winners, rewards,
+// status behaviour) now run through createSim/runSimToCompletion —
+// the same code path the watched battle and Skip both use.
 import { describe, it, expect } from "vitest";
 import {
   getSkillsForClass,
   makeCombatant,
   initBattle,
-  resolveRound,
-  pickAiTarget,
-  pickAiSkill,
-  applySkill,
-  runBattle,
   calculateRewards,
+  findStatusEffect,
   type ArenaBattleState,
-  type Combatant,
-  type ArenaSkill,
 } from "../../src/game/engine/arenaEngine";
+import {
+  createSim,
+  runSimToCompletion,
+  stepSim,
+  hashSimEvents,
+  type SimState,
+} from "../../src/game/engine/battleSim";
 import { generateCrab } from "../../src/game/engine/crabs";
 import type { ClassId } from "../../src/game/types";
+
+/** Spawn positions mirroring the renderer's slot anchors. */
+export function spawnsFor(
+  state: ArenaBattleState,
+): Record<string, { x: number; y: number }> {
+  const spawns: Record<string, { x: number; y: number }> = {};
+  for (const c of [...state.player, ...state.enemy]) {
+    const x =
+      c.side === "player"
+        ? c.row === "front"
+          ? 42
+          : c.row === "mid"
+            ? 26
+            : 10
+        : c.row === "front"
+          ? 58
+          : c.row === "mid"
+            ? 74
+            : 90;
+    spawns[c.crabId] = { x, y: 20 + c.slot * 15 };
+  }
+  return spawns;
+}
+
+export function simFor(state: ArenaBattleState): SimState {
+  return createSim(state, spawnsFor(state));
+}
 
 describe("getSkillsForClass", () => {
   it("returns exactly 3 skills for every class", () => {
@@ -107,7 +139,6 @@ describe("initBattle", () => {
     const state = initBattle(player, enemy, 12345);
     expect(state.arenaId).toMatch(/^ARENA-/);
     expect(state.seed).toBe(12345);
-    // NOTE: implementation starts turn at 0, increments at first resolveRound.
     expect(state.turn).toBe(0);
     expect(state.player).toHaveLength(5);
     expect(state.enemy).toHaveLength(5);
@@ -132,34 +163,35 @@ describe("initBattle", () => {
   });
 });
 
-describe("determinism", () => {
-  it("same seed produces same battle log", () => {
+describe("sim determinism", () => {
+  it("same seed produces the same event stream, winner and log", () => {
     const p = [1, 2, 3, 4, 5].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 10 + i })
     );
     const e = [1, 2, 3, 4, 5].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 20 + i })
     );
-    const s1 = runBattle(initBattle(p, e, 999), 20);
-    const s2 = runBattle(initBattle(p, e, 999), 20);
-    expect(s1.log.length).toBe(s2.log.length);
-    expect(s1.winner).toBe(s2.winner);
-    expect(s1.log.map((a) => a.message)).toEqual(s2.log.map((a) => a.message));
+    const s1 = runSimToCompletion(simFor(initBattle(p, e, 999)));
+    const s2 = runSimToCompletion(simFor(initBattle(p, e, 999)));
+    expect(hashSimEvents(s1.events)).toBe(hashSimEvents(s2.events));
+    expect(s1.battle.winner).toBe(s2.battle.winner);
+    expect(s1.battle.log.map((a) => a.message)).toEqual(
+      s2.battle.log.map((a) => a.message),
+    );
   });
 });
 
-describe("runBattle", () => {
-  it("produces a winner within maxTurns", () => {
+describe("sim battles", () => {
+  it("produces a winner; the stronger team wins", () => {
     const p = [10, 12, 11, 13, 10].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 10 + i })
     );
     const e = [5, 6, 5, 6, 5].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 20 + i })
     );
-    const state = runBattle(initBattle(p, e, 7), 30);
-    expect(state.winner).not.toBeNull();
-    // Player should win against weaker enemies
-    expect(state.winner).toBe("player");
+    const sim = runSimToCompletion(simFor(initBattle(p, e, 7)));
+    expect(sim.battle.winner).toBe("player");
+    expect(sim.timeMs).toBeLessThanOrEqual(180000);
   });
 
   it("weaker player team loses to stronger enemy", () => {
@@ -169,66 +201,8 @@ describe("runBattle", () => {
     const e = [20, 22, 21, 22, 20].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 20 + i })
     );
-    const state = runBattle(initBattle(p, e, 7), 30);
-    expect(state.winner).toBe("enemy");
-  });
-});
-
-describe("pickAiTarget", () => {
-  it("targets the lowest-HP enemy for non-healer classes", () => {
-    const p = [generateCrab({ classId: "reaver", level: 5, seed: 1 })];
-    const e = [
-      generateCrab({ classId: "bulwark", level: 5, seed: 2 }),
-      generateCrab({ classId: "bulwark", level: 5, seed: 3 }),
-      generateCrab({ classId: "bulwark", level: 5, seed: 4 }),
-      generateCrab({ classId: "bulwark", level: 5, seed: 5 }),
-      generateCrab({ classId: "bulwark", level: 5, seed: 6 }),
-    ];
-    const state = initBattle(p, e, 42);
-    const actor = state.player[0];
-    // Damage one enemy so it's clearly lowest HP.
-    state.enemy[1].hp = 1;
-    const target = pickAiTarget(actor, state);
-    expect(target).not.toBeNull();
-    expect(target?.crabId).toBe(state.enemy[1].crabId);
-  });
-
-  it("returns null when no enemies are alive", () => {
-    const p = [generateCrab({ classId: "reaver", level: 5, seed: 1 })];
-    const e = [generateCrab({ classId: "bulwark", level: 5, seed: 2 })];
-    const state = initBattle(p, e, 42);
-    for (const c of state.enemy) c.isDefeated = true;
-    const target = pickAiTarget(state.player[0], state);
-    expect(target).toBeNull();
-  });
-});
-
-describe("pickAiSkill", () => {
-  it("returns an affordable, off-cooldown skill", () => {
-    const crab = generateCrab({ classId: "reaver", level: 5, seed: 1 });
-    const c = makeCombatant(crab, "enemy", 0);
-    const skill = pickAiSkill(c);
-    expect(skill).toBeTruthy();
-    expect(skill.energyCost).toBeLessThanOrEqual(c.energy);
-  });
-
-  it("falls back to claw strike when energy is low", () => {
-    const crab = generateCrab({ classId: "reaver", level: 5, seed: 1 });
-    const c = makeCombatant(crab, "enemy", 0);
-    c.energy = 1; // only Claw Strike (cost 1) is affordable
-    const skill = pickAiSkill(c);
-    expect(skill.id).toBe("claw_strike");
-  });
-
-  it("prefers support skills for support classes when available", () => {
-    const crab = generateCrab({ classId: "shellmender", level: 10, seed: 5 });
-    const c = makeCombatant(crab, "player", 0);
-    c.energy = c.maxEnergy; // full energy so all skills affordable
-    const skill = pickAiSkill(c);
-    // Shellmender has Mending Pearl (skill 2) which targets ally → support
-    expect(["mend_pearl", "tide_sigil", "claw_strike"]).toContain(skill.id);
-    // Should prefer support (not claw_strike)
-    expect(skill.id).not.toBe("claw_strike");
+    const sim = runSimToCompletion(simFor(initBattle(p, e, 7)));
+    expect(sim.battle.winner).toBe("enemy");
   });
 });
 
@@ -240,64 +214,30 @@ describe("calculateRewards", () => {
     const e = [5, 6, 5, 6, 5].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 20 + i })
     );
-    const state = runBattle(initBattle(p, e, 7), 30);
-    const rewards = calculateRewards(state, 100);
+    const sim = runSimToCompletion(simFor(initBattle(p, e, 7)));
+    const rewards = calculateRewards(sim.battle, 100);
     expect(rewards.winner).toBe("player");
     expect(rewards.goldReward).toBeGreaterThan(0);
     expect(rewards.xpReward).toBeGreaterThan(0);
   });
 
-  it("defeat gives zero or minimal rewards", () => {
+  it("defeat gives zero rewards", () => {
     const p = [1, 1, 1, 1, 1].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 10 + i })
     );
     const e = [20, 22, 21, 22, 20].map((lvl, i) =>
       generateCrab({ level: lvl, seed: 20 + i })
     );
-    const state = runBattle(initBattle(p, e, 7), 30);
-    const rewards = calculateRewards(state, 100);
+    const sim = runSimToCompletion(simFor(initBattle(p, e, 7)));
+    const rewards = calculateRewards(sim.battle, 100);
     expect(rewards.winner).toBe("enemy");
     expect(rewards.goldReward).toBe(0);
     expect(rewards.xpReward).toBe(0);
   });
 });
 
-describe("status effects", () => {
-  it("freeze prevents a crab from acting", () => {
-    const player = [1, 2, 3, 4, 5].map((i) =>
-      generateCrab({ classId: "reaver", level: 5, seed: 100 + i })
-    );
-    const enemy = [1, 2, 3, 4, 5].map((i) =>
-      generateCrab({ classId: "bulwark", level: 5, seed: 200 + i })
-    );
-    const state = initBattle(player, enemy, 42);
-    const frozen = state.player[0];
-    // Manually apply freeze to the first player crab.
-    frozen.statuses.push({
-      id: "freeze",
-      roundsRemaining: 1,
-      magnitude: 0,
-    });
-    resolveRound(state);
-
-    // The frozen crab should have produced exactly one log entry,
-    // and it must be the "frozen" skip entry (no damage/heal action).
-    const frozenActions = state.log.filter(
-      (a) => a.actorId === frozen.crabId
-    );
-    expect(frozenActions.length).toBe(1);
-    expect(frozenActions[0].skillId).toBe("frozen");
-    expect(frozenActions[0].message).toMatch(/frozen/i);
-    // No damage / heal should have been recorded for the frozen crab.
-    expect(frozenActions[0].damage).toBeUndefined();
-    expect(frozenActions[0].heal).toBeUndefined();
-  });
-
-  it("warden freeze lasts 2 turns (frozen crab skips 2 consecutive turns)", () => {
-    // A frozen crab must NOT be able to attack. The freeze duration is 2
-    // rounds so the skip is unmissable — a crab frozen this round also
-    // skips the next. Both warden skills (Class Special + Tide Sigil) carry
-    // the 2-round freeze.
+describe("status effects in the sim", () => {
+  it("warden freeze skills carry a 2-round base (converted to 2000 battle-ms by the fairness layer)", () => {
     const skills = getSkillsForClass("warden");
     const freezeSkills = skills.filter(
       (s) => s.effect?.status === "freeze",
@@ -306,73 +246,59 @@ describe("status effects", () => {
     for (const s of freezeSkills) {
       expect(s.effect?.rounds).toBe(2);
     }
-
-    // End-to-end: a crab frozen for 2 rounds skips the first turn AND still
-    // carries a remaining freeze tick (roundsRemaining drops to 1, not 0),
-    // so it will skip the next turn too. We only run ONE round so the frozen
-    // crab is guaranteed to survive to act (the existing 1-round freeze test
-    // above confirms a single skip; this confirms the duration is > 1).
-    const player = [1, 2, 3, 4, 5].map((i) =>
-      generateCrab({ classId: "reaver", level: 5, seed: 100 + i })
-    );
-    const enemy = [1, 2, 3, 4, 5].map((i) =>
-      generateCrab({ classId: "bulwark", level: 5, seed: 200 + i })
-    );
-    const state = initBattle(player, enemy, 7);
-    const frozen = state.player[0];
-    frozen.statuses.push({
-      id: "freeze",
-      roundsRemaining: 2,
-      magnitude: 0,
-    });
-    resolveRound(state);
-    const skips = state.log.filter(
-      (a) => a.actorId === frozen.crabId && a.skillId === "frozen",
-    ).length;
-    const attacks = state.log.filter(
-      (a) => a.actorId === frozen.crabId && a.skillId !== "frozen",
-    ).length;
-    expect(skips).toBe(1);
-    expect(attacks).toBe(0);
-    // The freeze was consumed by ONE (roundsRemaining 2 → 1) and is STILL
-    // active — proving the 2-round duration. A 1-round freeze would be gone.
-    const remainingFreeze = frozen.statuses.find((s) => s.id === "freeze");
-    expect(remainingFreeze).toBeDefined();
-    expect(remainingFreeze?.roundsRemaining).toBe(1);
   });
 
-  it("weaken reduces damage dealt", () => {
-    // Two fresh states with identical seeds → identical RNG rolls.
-    // In state2 we apply weaken (magnitude 1.0 → -100% attack) before attacking.
-    // Damage should drop to zero (action.damage becomes undefined).
-    const player = [1, 2, 3, 4, 5].map((i) =>
-      generateCrab({ classId: "reaver", level: 10, seed: 100 + i })
+  it("a frozen crab lands no strikes while frozen, and acts again after expiry", () => {
+    const player = [generateCrab({ classId: "reaver", level: 10, seed: 101 })];
+    const enemy = [generateCrab({ classId: "bulwark", level: 10, seed: 201 })];
+    const state = initBattle(player, enemy, 42);
+    const frozen = state.player[0];
+    frozen.statuses.push({ id: "freeze", durationMs: 3000, magnitude: 0 });
+    const sim = simFor(state);
+    stepSim(sim, 2000);
+    const strikesWhileFrozen = sim.events.filter(
+      (e) => e.type === "strike" && e.actorId === frozen.crabId,
     );
-    const enemy = [1, 2, 3, 4, 5].map((i) =>
-      generateCrab({ classId: "bulwark", level: 10, seed: 200 + i })
+    expect(strikesWhileFrozen).toHaveLength(0);
+    // Freeze was genuinely active for part of that window.
+    expect(findStatusEffect(frozen, "freeze")).toBeDefined();
+    stepSim(sim, 6000);
+    const strikesAfter = sim.events.filter(
+      (e) => e.type === "strike" && e.actorId === frozen.crabId,
     );
+    expect(strikesAfter.length).toBeGreaterThan(0);
+    expect(findStatusEffect(frozen, "freeze")).toBeUndefined();
+  });
 
-    // Without weaken.
-    const state1 = initBattle(player, enemy, 999);
-    const actor1 = state1.player[0];
-    const target1 = state1.enemy[0];
-    const clawStrike: ArenaSkill = getSkillsForClass(actor1.classId)[0];
-    const action1 = applySkill(state1, actor1, clawStrike, [target1]);
-    expect(action1.damage).toBeGreaterThan(0);
-
-    // With weaken magnitude = 1.0 → effectiveAtk = 0 → damage = 0.
-    const state2 = initBattle(player, enemy, 999);
-    const actor2 = state2.player[0];
-    const target2 = state2.enemy[0];
-    actor2.statuses.push({
-      id: "weaken",
-      roundsRemaining: 2,
-      magnitude: 1.0,
-    });
-    const action2 = applySkill(state2, actor2, clawStrike, [target2]);
-    // With magnitude 1.0, rawDmg is exactly 0 → damage field is omitted.
-    expect(action2.damage).toBeUndefined();
-    // Target HP should not have changed.
-    expect(target2.hp).toBe(target2.maxHp);
+  it("weaken magnitude 1.0 reduces the weakened crab's damage to zero", () => {
+    const mk = (weakened: boolean) => {
+      const player = [
+        generateCrab({ classId: "reaver", level: 10, seed: 101 }),
+      ];
+      const enemy = [
+        generateCrab({ classId: "bulwark", level: 10, seed: 201 }),
+      ];
+      // Huge HP pool so nobody dies during the probe window.
+      const state = initBattle(player, enemy, 999);
+      state.enemy[0].maxHp = 100000;
+      state.enemy[0].hp = 100000;
+      if (weakened) {
+        state.player[0].statuses.push({
+          id: "weaken",
+          durationMs: 60000,
+          magnitude: 1.0,
+        });
+      }
+      const sim = simFor(state);
+      stepSim(sim, 6000);
+      return sim.events
+        .filter(
+          (e) =>
+            e.type === "strike" && e.actorId === state.player[0].crabId,
+        )
+        .reduce((sum, e) => sum + (e.type === "strike" ? e.damage : 0), 0);
+    };
+    expect(mk(false)).toBeGreaterThan(0);
+    expect(mk(true)).toBe(0);
   });
 });
