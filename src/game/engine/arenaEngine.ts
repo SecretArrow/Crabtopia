@@ -1,13 +1,17 @@
-// Crabtopia - Arena 5v5 Turn-Based Battle Engine
+// Crabtopia - Arena 5v5 battle vocabulary & contracts
 // Pure logic, deterministic by seed. No React, no UI.
-// Implements: skills (3 per crab from class), status effects, combos, energy, AI.
+// Holds: skills (3 per crab from class), combatant/battle construction,
+// the shared seeded RNG stream, formation position rules, and the
+// rewards contract. The real-time RULES implementation (movement,
+// cooldowns, statuses, damage resolution) lives in battleSim.ts —
+// this module no longer resolves battles itself.
 // Five crabs per side (5v5) — see ARENA-GAME-SHARED.md for the full battle spec.
 
 import { Crab, ClassId, ElementId, FactionId, Formation } from "../types";
 import { CLASSES } from "../content/classes";
 import { mulberry32 } from "./rng";
 import { rowOf, type RowId } from "./formation";
-import { effectiveness, elementOf } from "./elements";
+import { elementOf } from "./elements";
 import { ARENA_DROP_MATERIALS } from "../data/leaderboardNames";
 
 export type { RowId };
@@ -21,13 +25,29 @@ export type StatusEffectId =
   | "freeze"
   | "defense_down"
   | "regen"
-  | "shield";
+  | "shield"
+  | "slow";
+
+/**
+ * Hard crowd-control statuses — they fully disable the victim while
+ * active and are governed by the fairness layer (tenacity, diminishing
+ * returns, uptime cap, cleanse). Today only `freeze` is hard CC; the
+ * category machinery in battleSim.ts is generic so sleep/stun can slot
+ * in later without rework.
+ */
+export type HardCcId = "freeze";
+
+/** Statuses a cleanse can remove (debuffs + hard CC + slow). */
+export type CleansableId = "weaken" | "defense_down" | "freeze" | "slow";
 
 export interface StatusEffect {
   id: StatusEffectId;
-  roundsRemaining: number;
+  /** Remaining duration in BATTLE milliseconds (the sim ticks it down). */
+  durationMs: number;
   magnitude: number;
   sourceId?: string;
+  /** Battle-ms timestamp of (re)application — cleanse removes the newest. */
+  appliedAtMs?: number;
 }
 
 export interface ArenaSkill {
@@ -213,9 +233,9 @@ function makeTideSigil(classId: ClassId): ArenaSkill {
           "Curse all enemies with weakening tide-sigil, lowering their attack.",
       };
     case "warden":
-      // Controller: freeze target for 2 turns — a frozen crab CANNOT act
-      // (the skip is enforced both in resolveRound and in the AutoPilot's
-      // decideAction, so neither battle path lets a frozen crab attack).
+      // Controller: freeze the target — a frozen crab CANNOT act. In the
+      // real-time sim freeze is hard CC metered by the fairness layer
+      // (battleSim.ts): 2000 battle-ms base, tenacity/DR/uptime-capped.
       return {
         ...base,
         visual: "lightning",
@@ -311,7 +331,6 @@ export function getSkillsForClass(classId: ClassId): ArenaSkill[] {
 
 const MAX_ENERGY = 10;
 const START_ENERGY = 3;
-const ENERGY_PER_ROUND = 2;
 
 /** Legacy row for a slot when no formation is supplied: slots 0-2 front, 3-4 back. */
 export function defaultRowForSlot(slot: number): RowId {
@@ -422,152 +441,57 @@ export function initBattle(
   return state;
 }
 
-// ============================================================================
-// STATUS HELPERS
-// ============================================================================
 
-function findStatus(c: Combatant, id: StatusEffectId): StatusEffect | undefined {
+// ============================================================================
+// SHARED COMBAT PRIMITIVES (used by the real-time simulator, battleSim.ts)
+// ============================================================================
+//
+// The turn-based round resolver is gone: battleSim.ts is the ONE rules
+// implementation for watched and skipped battles alike. What remains here
+// is the shared vocabulary both layers build on — skill definitions,
+// combatant construction, the seeded RNG stream, the position rules, and
+// the rewards contract.
+
+/** Find a combatant's active status instance, if any. */
+export function findStatusEffect(
+  c: Combatant,
+  id: StatusEffectId,
+): StatusEffect | undefined {
   return c.statuses.find((s) => s.id === id);
 }
 
-function addStatus(
-  c: Combatant,
-  id: StatusEffectId,
-  rounds: number,
-  magnitude: number,
-  sourceId?: string
-): void {
-  const existing = findStatus(c, id);
-  if (existing) {
-    existing.roundsRemaining = Math.max(existing.roundsRemaining, rounds);
-    if (id === "shield") {
-      // shields stack additively (absorb pool)
-      existing.magnitude += magnitude;
-    } else {
-      existing.magnitude = Math.max(existing.magnitude, magnitude);
-    }
-    existing.sourceId = sourceId;
-  } else {
-    c.statuses.push({ id, roundsRemaining: rounds, magnitude, sourceId });
-  }
-}
-
-// Tick weaken / defense_down / regen / shield durations at END of round.
-// Freeze is NOT ticked here — it ticks when consumed at the start of a crab's turn.
-function tickNonFreezeStatuses(state: ArenaBattleState): void {
-  for (const c of allCombatants(state)) {
-    for (const s of c.statuses) {
-      if (s.id === "freeze") continue;
-      s.roundsRemaining -= 1;
-    }
-    c.statuses = c.statuses.filter(
-      (s) => s.id === "freeze" || s.roundsRemaining > 0
-    );
-  }
-}
-
-// Apply regen heals at END of round (before tick).
-function applyRegenToAll(state: ArenaBattleState): void {
-  for (const c of allCombatants(state)) {
-    if (c.isDefeated) continue;
-    const regen = findStatus(c, "regen");
-    if (regen) {
-      const heal = Math.max(1, Math.round((c.maxHp * regen.magnitude) / 100));
-      const before = c.hp;
-      c.hp = Math.min(c.maxHp, c.hp + heal);
-      const actual = c.hp - before;
-      if (actual > 0) {
-        state.log.push({
-          turn: state.turn,
-          actorId: c.crabId,
-          actorSide: c.side,
-          skillId: "regen_tick",
-          skillName: "Regen",
-          targetIds: [c.crabId],
-          targetSide: c.side,
-          heal: actual,
-          visual: "heal_pearl",
-          message: `${c.name} regenerates ${actual} HP from a tide-pearl aura.`,
-        });
-      }
-    }
-  }
-}
-
-// ============================================================================
-// DAMAGE / HEAL CORE
-// ============================================================================
-
-function allCombatants(state: ArenaBattleState): Combatant[] {
-  return [...state.player, ...state.enemy];
-}
-
-function sideOf(state: ArenaBattleState, side: "player" | "enemy"): Combatant[] {
-  return side === "player" ? state.player : state.enemy;
-}
-
 // Mage & healer classes use the "skill" stat as their base damage/heal stat.
-function baseStat(actor: Combatant): number {
+export function baseStatOf(actor: Combatant): number {
   if (actor.classId === "tidecaller" || actor.classId === "shellmender") {
     return actor.skill;
   }
   return actor.attack;
 }
 
-// Effective attack accounting for weaken debuff on the actor.
-function effectiveAtk(actor: Combatant): number {
-  const weaken = findStatus(actor, "weaken");
+// Effective attack accounting for the weaken debuff on the actor and the
+// slow status (slowed attackers also swing slower — the simulator folds
+// slow into action durations; the attack VALUE only reflects weaken).
+export function effectiveAttackOf(actor: Combatant): number {
+  const weaken = findStatusEffect(actor, "weaken");
   const mult = weaken ? 1 - weaken.magnitude : 1;
-  return baseStat(actor) * mult;
+  return baseStatOf(actor) * mult;
 }
 
-// Apply damage to a single target. Shield absorbs first.
-// Returns the amount of HP actually removed (after shield).
-function dealDamage(
-  state: ArenaBattleState,
-  target: Combatant,
-  rawDmg: number
-): number {
-  let remaining = Math.max(0, Math.round(rawDmg));
-  const shield = findStatus(target, "shield");
-  if (shield) {
-    const absorb = Math.min(shield.magnitude, remaining);
-    shield.magnitude -= absorb;
-    remaining -= absorb;
-    if (shield.magnitude <= 0) {
-      target.statuses = target.statuses.filter((s) => s.id !== "shield");
-    }
-  }
-  if (remaining > 0) {
-    target.hp = Math.max(0, target.hp - remaining);
-    if (target.hp <= 0) {
-      target.isDefeated = true;
-    }
-  }
-  // Track total damage rolled (includes shield-absorbed) for stats.
-  state.totalDamageDealt[dealSourceSide(state, target)] += Math.round(rawDmg);
-  return remaining;
+/**
+ * Draw the next value from the battle's ONE seeded RNG stream
+ * (mulberry32(seed ^ 0x9e3779b9)). The simulator draws every variance /
+ * status roll from this stream in fixed tick order and calculateRewards
+ * draws last, so a watched battle and a skipped battle with the same
+ * seed consume the identical stream and produce identical rewards.
+ */
+export function drawBattleRandom(state: ArenaBattleState): number {
+  return roll(state);
 }
-
-// Whose damage is this? The "player" total tracks damage dealt BY player crabs.
-// `target` is on the opposite side of the attacker, so dealSourceSide = opposite of target.side.
-function dealSourceSide(state: ArenaBattleState, target: Combatant): "player" | "enemy" {
-  return target.side === "player" ? "enemy" : "player";
-}
-
-function applyHeal(target: Combatant, amount: number): number {
-  if (target.isDefeated) return 0;
-  const before = target.hp;
-  target.hp = Math.min(target.maxHp, target.hp + Math.round(amount));
-  return target.hp - before;
-}
-
-// ============================================================================
-// TARGET SELECTION (AI)
-// ============================================================================
 
 function aliveOnSide(state: ArenaBattleState, side: "player" | "enemy"): Combatant[] {
-  return sideOf(state, side).filter((c) => !c.isDefeated);
+  return (side === "player" ? state.player : state.enemy).filter(
+    (c) => !c.isDefeated,
+  );
 }
 
 // ============================================================================
@@ -640,488 +564,6 @@ export function positionDamageFactor(
   }
   return factor;
 }
-
-/**
- * Pick a target for `skill`, respecting position reach. For single-target
- * enemy skills the pool is restricted to legal targets (melee → frontmost
- * row); the lowest-HP enemy in the pool wins, with the same back-row
- * near-tie preference as pickAiTarget. Other skills delegate to pickAiTarget.
- */
-export function pickTargetForSkill(
-  state: ArenaBattleState,
-  actor: Combatant,
-  skill: ArenaSkill
-): Combatant | null {
-  if (skill.targetType !== "enemy") return pickAiTarget(actor, state);
-  const pool = legalEnemyTargets(state, actor, skill);
-  if (pool.length === 0) return null;
-  return pool.reduce((low, c) => {
-    const lowRatio = low.hp / low.maxHp;
-    const cRatio = c.hp / c.maxHp;
-    if (cRatio < lowRatio - 0.02) return c;
-    if (Math.abs(cRatio - lowRatio) <= 0.02 && c.slot > low.slot) return c;
-    return low;
-  }, pool[0]);
-}
-
-/**
- * Pick a target for an AI-controlled crab.
- * Healers (shellmender) target the lowest-HP ally; everyone else targets the lowest-HP enemy.
- *
- * 5v5 note: with five crabs per side, HP-ratio ties are more common. On near-ties
- * (within 2% of max HP) we prefer the back-row crab (higher slot index) — back-row
- * slots conventionally hold mages/healers who are easier to focus down. This is a
- * subtle tactical preference; it does NOT override a clearly lower-HP target.
- */
-export function pickAiTarget(
-  actor: Combatant,
-  state: ArenaBattleState
-): Combatant | null {
-  const enemySide: "player" | "enemy" =
-    actor.side === "player" ? "enemy" : "player";
-
-  const isHealer = actor.classId === "shellmender";
-  if (isHealer) {
-    // Heal lowest-HP ally (not self unless self is the only one)
-    const allies = aliveOnSide(state, actor.side);
-    const candidates = allies.filter((c) => c.crabId !== actor.crabId);
-    const pool = candidates.length > 0 ? candidates : allies;
-    if (pool.length === 0) return null;
-    return pool.reduce((low, c) => {
-      const lowRatio = low.hp / low.maxHp;
-      const cRatio = c.hp / c.maxHp;
-      if (cRatio < lowRatio - 0.02) return c;
-      if (Math.abs(cRatio - lowRatio) <= 0.02 && c.slot > low.slot) return c;
-      return low;
-    }, pool[0]);
-  }
-
-  // Lowest-HP enemy, with a back-row tiebreak on near-ties.
-  const enemies = aliveOnSide(state, enemySide);
-  if (enemies.length === 0) return null;
-  return enemies.reduce((low, c) => {
-    const lowRatio = low.hp / low.maxHp;
-    const cRatio = c.hp / c.maxHp;
-    if (cRatio < lowRatio - 0.02) return c;
-    if (Math.abs(cRatio - lowRatio) <= 0.02 && c.slot > low.slot) return c;
-    return low;
-  }, enemies[0]);
-}
-
-/**
- * Pick the best skill for an AI crab.
- * Healers/tanks prefer support skills; otherwise, the highest-damage affordable & off-cooldown skill.
- * Always returns something usable (falls back to Claw Strike which has cost 1 & cooldown 0).
- */
-export function pickAiSkill(actor: Combatant): ArenaSkill {
-  const skills = getSkillsForClass(actor.classId);
-  const usable = skills.filter(
-    (s) =>
-      actor.energy >= s.energyCost && (actor.cooldowns[s.id] ?? 0) <= 0
-  );
-
-  if (usable.length === 0) {
-    // Shouldn't happen because Claw Strike costs 1 & has no cooldown,
-    // but guard anyway: use Claw Strike.
-    return skills[0];
-  }
-
-  // Support classes prefer support skills when available.
-  const isSupport =
-    actor.classId === "shellmender" || actor.classId === "bulwark";
-  if (isSupport) {
-    const support = usable.find(
-      (s) =>
-        s.targetType === "ally" ||
-        s.targetType === "self" ||
-        s.targetType === "all_allies"
-    );
-    if (support) return support;
-  }
-
-  // Otherwise: highest expected damage roll = baseStat * power.
-  // We approximate using actor.attack for everyone; mages will be slightly underestimated
-  // but the relative ordering between their own skills remains correct since power dominates.
-  return usable.reduce((best, s) =>
-    s.power * actor.attack > best.power * actor.attack ? s : best
-  );
-}
-
-// Build the target list for a skill based on its targetType.
-function resolveTargets(
-  state: ArenaBattleState,
-  actor: Combatant,
-  skill: ArenaSkill
-): Combatant[] {
-  const enemySide: "player" | "enemy" =
-    actor.side === "player" ? "enemy" : "player";
-
-  switch (skill.targetType) {
-    case "enemy": {
-      const t = pickTargetForSkill(state, actor, skill);
-      return t ? [t] : [];
-    }
-    case "all_enemies":
-      return aliveOnSide(state, enemySide);
-    case "ally": {
-      // Lowest-HP ally (excluding self if others alive)
-      const allies = aliveOnSide(state, actor.side);
-      const candidates = allies.filter((c) => c.crabId !== actor.crabId);
-      const pool = candidates.length > 0 ? candidates : allies;
-      if (pool.length === 0) return [];
-      return [
-        pool.reduce((low, c) =>
-          c.hp / c.maxHp < low.hp / low.maxHp ? c : low
-        , pool[0]),
-      ];
-    }
-    case "all_allies":
-      return aliveOnSide(state, actor.side);
-    case "self":
-      return [actor];
-    default:
-      return [];
-  }
-}
-
-// ============================================================================
-// SKILL APPLICATION
-// ============================================================================
-
-/**
- * Apply a skill — mutates state and returns the resulting ArenaAction.
- */
-export function applySkill(
-  state: ArenaBattleState,
-  actor: Combatant,
-  skill: ArenaSkill,
-  targets: Combatant[]
-): ArenaAction {
-  // Pay energy & set cooldown.
-  actor.energy = Math.max(0, actor.energy - skill.energyCost);
-  if (skill.cooldown > 0) {
-    actor.cooldowns[skill.id] = skill.cooldown;
-  }
-
-  const atk = effectiveAtk(actor);
-  const targetSide: "player" | "enemy" =
-    skill.targetType === "self" || skill.targetType === "ally" || skill.targetType === "all_allies"
-      ? actor.side
-      : actor.side === "player"
-      ? "enemy"
-      : "player";
-
-  let totalDamage = 0;
-  let totalHeal = 0;
-  const statusApplied: { status: StatusEffectId; targetId: string }[] = [];
-  const defeated: string[] = [];
-  let bestCombo = 0;
-
-  for (const target of targets) {
-    if (target.isDefeated) continue;
-
-    const isAllyTarget =
-      target.side === actor.side &&
-      (skill.targetType === "ally" || skill.targetType === "all_allies");
-
-    if (skill.targetType === "self") {
-      // Self-cast skills: only apply status (effect.applyTo covers allies/enemies,
-      // not the caster themselves unless they're included via all_allies below).
-      // No damage / heal to self.
-    } else if (isAllyTarget) {
-      // Healing skill on ally: heal instead of damage.
-      // Use skill.power as the heal multiplier on the caster's base stat.
-      const variance = 0.85 + roll(state) * 0.3;
-      const healAmount = atk * skill.power * variance;
-      const healed = applyHeal(target, healAmount);
-      totalHeal += healed;
-    } else {
-      // Damage to enemy.
-      // Increment combo count on this target (per-round).
-      target.comboCount += 1;
-      const comboMult =
-        target.comboCount >= 2 ? 1 + 0.2 * (target.comboCount - 1) : 1;
-      if (comboMult > 1 && comboMult > bestCombo) {
-        bestCombo = comboMult;
-      }
-
-      const variance = 0.85 + roll(state) * 0.3;
-      const def = target.defense;
-      const defFactor = 1 - def / (def + 120);
-
-      // AoE falloff: in 5v5, all_enemies skills hit up to 5 targets — without
-      // adjustment they would deal ~67% more total damage than against a smaller
-      // team. Apply a flat 15% per-target reduction so AoE remains useful but
-      // can't one-shot an entire team. Single-target skills are unaffected.
-      const aoeFactor = skill.targetType === "all_enemies" ? 0.85 : 1.0;
-
-      // Status mod: defense_down on target → +30% damage taken.
-      const dDown = findStatus(target, "defense_down");
-      const statusMod = dDown ? 1 + dDown.magnitude : 1;
-
-      // Position mod: frontline guard / backline protection (single-target only).
-      const posFactor = positionDamageFactor(state, target, skill);
-
-      // Element mod: attacker element vs target element (elements.ts —
-      // strong x1.15, weak x0.90, neutral x1.0).
-      const elemFactor = effectiveness(actor.element, target.element);
-
-      const rawDmg =
-        atk * skill.power * variance * defFactor * statusMod * comboMult * aoeFactor * posFactor * elemFactor;
-
-      const hpRemoved = dealDamage(state, target, rawDmg);
-      totalDamage += Math.round(rawDmg);
-
-      if (hpRemoved > 0 && target.hp <= 0 && target.isDefeated) {
-        defeated.push(target.crabId);
-      }
-    }
-
-    // Apply status effect from the skill (if any) to the appropriate recipients.
-    if (skill.effect) {
-      const eff = skill.effect;
-      let recipients: Combatant[] = [];
-      if (eff.applyTo === "target") {
-        recipients = [target];
-      } else if (eff.applyTo === "all_allies") {
-        recipients = aliveOnSide(state, actor.side);
-      } else if (eff.applyTo === "all_enemies") {
-        const oppSide: "player" | "enemy" =
-          actor.side === "player" ? "enemy" : "player";
-        recipients = aliveOnSide(state, oppSide);
-      }
-      for (const r of recipients) {
-        if (r.isDefeated) continue;
-        // Compute the actual magnitude for shield: fraction of caster maxHp.
-        let mag = eff.magnitude;
-        if (eff.status === "shield") {
-          mag = Math.round(actor.maxHp * eff.magnitude + actor.level * 8);
-        }
-        addStatus(r, eff.status, eff.rounds, mag, actor.crabId);
-        statusApplied.push({ status: eff.status, targetId: r.crabId });
-      }
-    }
-  }
-
-  if (bestCombo > state.maxCombo) {
-    state.maxCombo = bestCombo;
-  }
-
-  // Build a human-readable message.
-  const targetNames = targets.map((t) => t.name).join(", ");
-  let message = `${actor.name} casts ${skill.name}`;
-  if (totalDamage > 0) message += ` on ${targetNames} for ${totalDamage} damage`;
-  else if (totalHeal > 0) message += ` on ${targetNames}, restoring ${totalHeal} HP`;
-  else message += ` to channel a sigil`;
-  if (statusApplied.length > 0) {
-    const statuses = Array.from(new Set(statusApplied.map((s) => s.status))).join(", ");
-    message += ` (${statuses})`;
-  }
-  if (defeated.length > 0) {
-    message += ` — ${defeated.length} foe${defeated.length > 1 ? "s" : ""} defeated!`;
-  }
-  if (bestCombo >= 1.2) {
-    message += ` [Combo x${targetHitsLabel(bestCombo)}!]`;
-  }
-
-  const action: ArenaAction = {
-    turn: state.turn,
-    actorId: actor.crabId,
-    actorSide: actor.side,
-    skillId: skill.id,
-    skillName: skill.name,
-    targetIds: targets.map((t) => t.crabId),
-    targetSide,
-    visual: skill.visual,
-    message,
-  };
-  if (totalDamage > 0) action.damage = totalDamage;
-  if (totalHeal > 0) action.heal = totalHeal;
-  if (statusApplied.length > 0) action.statusApplied = statusApplied;
-  if (bestCombo >= 1.2) action.combo = bestCombo;
-  if (defeated.length > 0) action.defeated = defeated;
-
-  state.log.push(action);
-  return action;
-}
-
-// Convert a combo multiplier (1.2, 1.4, ...) into a friendly "x2", "x3" label.
-function targetHitsLabel(comboMult: number): number {
-  // 1.2 → 2, 1.4 → 3, 1.6 → 4 ...
-  return Math.round((comboMult - 1) / 0.2) + 1;
-}
-
-// ============================================================================
-// ROUND RESOLUTION
-// ============================================================================
-
-// Turn order: alive crabs sorted by speed desc; ties broken by class order in CLASSES.
-const CLASS_ORDER: ClassId[] = [
-  "skitter",
-  "reaver",
-  "gildclaw",
-  "warden",
-  "pincher",
-  "tidecaller",
-  "bulwark",
-  "shellmender",
-];
-
-function classOrderIndex(classId: ClassId): number {
-  const i = CLASS_ORDER.indexOf(classId);
-  return i === -1 ? 99 : i;
-}
-
-function turnOrder(state: ArenaBattleState): Combatant[] {
-  const alive = allCombatants(state).filter((c) => !c.isDefeated);
-  alive.sort((a, b) => {
-    if (b.speed !== a.speed) return b.speed - a.speed;
-    return classOrderIndex(a.classId) - classOrderIndex(b.classId);
-  });
-  return alive;
-}
-
-function checkWinner(state: ArenaBattleState): void {
-  if (state.winner !== null) return;
-  const playerAlive = state.player.some((c) => !c.isDefeated);
-  const enemyAlive = state.enemy.some((c) => !c.isDefeated);
-  if (!playerAlive && !enemyAlive) {
-    state.winner = "enemy"; // mutual wipe → defender wins
-  } else if (!playerAlive) {
-    state.winner = "enemy";
-  } else if (!enemyAlive) {
-    state.winner = "player";
-  }
-}
-
-function regenEnergy(state: ArenaBattleState): void {
-  for (const c of allCombatants(state)) {
-    if (c.isDefeated) continue;
-    c.energy = Math.min(c.maxEnergy, c.energy + ENERGY_PER_ROUND);
-  }
-}
-
-function tickCooldowns(state: ArenaBattleState): void {
-  for (const c of allCombatants(state)) {
-    for (const id of Object.keys(c.cooldowns)) {
-      if (c.cooldowns[id] > 0) c.cooldowns[id] -= 1;
-      if (c.cooldowns[id] <= 0) delete c.cooldowns[id];
-    }
-  }
-}
-
-function resetCombos(state: ArenaBattleState): void {
-  for (const c of allCombatants(state)) {
-    c.comboCount = 0;
-  }
-}
-
-/**
- * Resolve one full round: every alive crab acts once in speed order.
- * Returns the actions produced this round. Mutates state in place.
- */
-export function resolveRound(state: ArenaBattleState): ArenaAction[] {
-  if (state.winner !== null) return [];
-  state.turn += 1;
-  const roundLogStart = state.log.length;
-
-  // Energy regen happens at END of round (so round 1 starts at the 3-energy floor
-  // defined by makeCombatant; round 2 onwards benefits from the +2 boost).
-
-  for (const actor of turnOrder(state)) {
-    if (state.winner !== null) break;
-    if (actor.isDefeated) continue;
-
-    // Freeze: if frozen, skip this turn and consume the freeze.
-    const freeze = findStatus(actor, "freeze");
-    if (freeze && freeze.roundsRemaining > 0) {
-      freeze.roundsRemaining -= 1;
-      if (freeze.roundsRemaining <= 0) {
-        actor.statuses = actor.statuses.filter((s) => s.id !== "freeze");
-      }
-      state.log.push({
-        turn: state.turn,
-        actorId: actor.crabId,
-        actorSide: actor.side,
-        skillId: "frozen",
-        skillName: "Frozen",
-        targetIds: [actor.crabId],
-        targetSide: actor.side,
-        visual: "lightning",
-        message: `${actor.name} is frozen solid and skips the turn!`,
-      });
-      continue;
-    }
-
-    const skill = pickAiSkill(actor);
-    let targets = resolveTargets(state, actor, skill);
-
-    if (targets.length === 0) {
-      // Fallback: cast Claw Strike on the lowest-HP enemy.
-      const fallback = getSkillsForClass(actor.classId)[0];
-      const t = pickAiTarget(actor, state);
-      if (t) {
-        targets = [t];
-        applySkill(state, actor, fallback, targets);
-      }
-      // If no target at all, skip silently.
-      continue;
-    }
-
-    applySkill(state, actor, skill, targets);
-
-    checkWinner(state);
-  }
-
-  // End-of-round maintenance.
-  applyRegenToAll(state);
-  regenEnergy(state);
-  tickNonFreezeStatuses(state);
-  tickCooldowns(state);
-  resetCombos(state);
-  checkWinner(state);
-
-  return state.log.slice(roundLogStart);
-}
-
-// ============================================================================
-// FULL BATTLE RUNNER
-// ============================================================================
-
-/**
- * Run the full battle to completion. Used for "auto" mode and final resolution.
- * Stops when a winner is determined or maxTurns is reached (default 30).
- *
- * 5v5 note: with five crabs per side, each round produces ~67% more actions than
- * a smaller-team format, but total team HP and total team DPS scale by the same
- * factor — so the expected number of rounds to resolve a battle is unchanged.
- * The default cap of 30 rounds remains sufficient; callers may pass a smaller
- * cap for faster sim.
- */
-export function runBattle(
-  state: ArenaBattleState,
-  maxTurns = 30
-): ArenaBattleState {
-  while (state.winner === null && state.turn < maxTurns) {
-    resolveRound(state);
-  }
-  if (state.winner === null) {
-    // Time-out: decide by remaining HP ratio.
-    const playerHpLeft = state.player.reduce(
-      (sum, c) => sum + (c.isDefeated ? 0 : c.hp),
-      0
-    );
-    const enemyHpLeft = state.enemy.reduce(
-      (sum, c) => sum + (c.isDefeated ? 0 : c.hp),
-      0
-    );
-    if (playerHpLeft > enemyHpLeft) state.winner = "player";
-    else if (enemyHpLeft > playerHpLeft) state.winner = "enemy";
-    else state.winner = "enemy"; // defender wins ties
-  }
-  return state;
-}
-
 // ============================================================================
 // REWARDS
 // ============================================================================

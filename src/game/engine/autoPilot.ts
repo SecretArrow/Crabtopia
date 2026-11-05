@@ -2,10 +2,17 @@
 // ---------------------------------------------------------------------------
 // Crabtopia's Arena is a FULL AUTO BATTLER: after deployment the battle
 // runs itself. Every combatant, on both sides, is driven by this one
-// pilot. The pilot is deterministic (no RNG): same state → same
+// pilot. The pilot is deterministic (no RNG): same sim state → same
 // decision, so battles and tests are reproducible.
 //
+// In the real-time simulator (battleSim.ts) a "decision" is an INTENT —
+// a skill plus its intended targets. The unit's steering then closes to
+// the skill's engagement band and the sim starts the action; the pilot
+// re-evaluates every 250 battle-ms while the unit is uncommitted.
+//
 // Decision policy (in priority order):
+//   0. CLEANSE — a Shellmender whose heal is usable cleanses a
+//      hard-CC'd ally (the heal removes the CC — see battleSim).
 //   1. HEAL — if a healing skill is usable and any ally (including the
 //      actor) is below HEAL_THRESHOLD (55%) max HP, cast the heal on
 //      the lowest-HP% ally.
@@ -17,20 +24,26 @@
 //      (position rules via legalEnemyTargets: melee reaches only the
 //      frontmost living row; backline protection applies), pick the
 //      skill+target pair by: (a) a target that can be finished this
-//      turn (estimated damage ≥ its HP), (b) highest estimated damage,
+//      hit (estimated damage ≥ its HP), (b) highest estimated damage,
 //      (c) higher energy cost ("bigger skill") as tiebreak.
-//      Target ranking inside one skill: finisher first → element-weak
-//      target (effectiveness table) → lowest HP → frontmost row →
-//      lowest slot. Deterministic tiebreaks everywhere.
+//      Class flavour inside this step:
+//        · Skitter (assassin) IGNORES the melee reach rule — its pool
+//          is every living enemy, ranked finisher → lowest HP →
+//          back-row first (it flanks to the squishy backline).
+//        · Warden aims its freeze skills at the enemy CARRY (highest
+//          attack) instead of the usual focus ranking.
+//        · Bulwark (guard) prioritises enemies that are currently
+//          engaging its back/mid-row allies within guard reach.
 //   5. FALLBACK — Claw Strike on the policy target when nothing else
-//      is usable (energy-starved turns).
+//      is usable (energy-starved moments).
 //
-// Damage estimation mirrors applySkill's deterministic factors
+// Damage estimation mirrors the simulator's deterministic factors
 // (base stat × power × defence factor × position factor × element
 // effectiveness) and ignores variance / status / combo multipliers —
 // an estimate, documented as such.
 
 import {
+  findStatusEffect,
   getSkillsForClass,
   legalEnemyTargets,
   positionDamageFactor,
@@ -38,6 +51,7 @@ import {
   type ArenaSkill,
   type Combatant,
 } from "./arenaEngine";
+import type { SimState, SimUnit } from "./battleSim";
 import { effectiveness } from "./elements";
 
 /** Heal when an ally drops below this fraction of max HP. */
@@ -46,8 +60,8 @@ export const HEAL_THRESHOLD = 0.55;
 export interface PilotDecision {
   skill: ArenaSkill;
   targets: Combatant[];
-  /** Machine-readable reason, for logs/tests: heal|support|aoe|damage|fallback. */
-  reason: "heal" | "support" | "aoe" | "damage" | "fallback";
+  /** Machine-readable reason, for logs/tests. */
+  reason: "heal" | "cleanse" | "support" | "aoe" | "damage" | "fallback";
 }
 
 function aliveOnSide(
@@ -111,6 +125,28 @@ export function rankTargets(
   });
 }
 
+/**
+ * Assassin ranking (Skitter): finisher → lowest HP → BACK row first →
+ * lowest slot. The backline preference is the flank: the assassin runs
+ * past the frontline to the squishy casters behind it.
+ */
+export function rankFlankTargets(
+  state: ArenaBattleState,
+  actor: Combatant,
+  skill: ArenaSkill,
+  pool: Combatant[],
+): Combatant[] {
+  return [...pool].sort((a, b) => {
+    const finA = estimateDamage(state, actor, skill, a) >= a.hp ? 0 : 1;
+    const finB = estimateDamage(state, actor, skill, b) >= b.hp ? 0 : 1;
+    if (finA !== finB) return finA - finB;
+    if (a.hp !== b.hp) return a.hp - b.hp;
+    if (ROW_ORDER[a.row] !== ROW_ORDER[b.row])
+      return ROW_ORDER[b.row] - ROW_ORDER[a.row];
+    return a.slot - b.slot;
+  });
+}
+
 function isHealSkill(skill: ArenaSkill): boolean {
   return skill.targetType === "ally" && skill.visual === "heal_pearl";
 }
@@ -143,29 +179,89 @@ function targetsFor(
   }
 }
 
+/** Is this combatant currently hard-CC'd (frozen) in sim terms? */
+export function isHardCcd(c: Combatant): boolean {
+  const freeze = findStatusEffect(c, "freeze");
+  return !!freeze && freeze.durationMs > 0;
+}
+
+/** A skill the unit can start right now (energy + sim cooldown clocks). */
+function usableSkills(sim: SimState, unit: SimUnit): ArenaSkill[] {
+  const actor = unit.c;
+  return getSkillsForClass(actor.classId).filter((s) => {
+    if (unit.energyF < s.energyCost) return false;
+    if (s.id === "claw_strike") return sim.timeMs >= unit.basicReadyAt;
+    return sim.timeMs >= (unit.skillReadyAt[s.id] ?? 0);
+  });
+}
+
+/** The target pool for a single-target enemy skill under the pilot policy. */
+function targetPool(
+  sim: SimState,
+  unit: SimUnit,
+  skill: ArenaSkill,
+): Combatant[] {
+  const state = sim.battle;
+  const actor = unit.c;
+  // Assassins flank: the reach rule does not bind the Skitter — its
+  // pool is every living enemy and its steering runs to the victim.
+  if (actor.classId === "skitter") {
+    return aliveOnSide(state, actor.side === "player" ? "enemy" : "player");
+  }
+  return legalEnemyTargets(state, actor, skill);
+}
+
+function rankFor(
+  sim: SimState,
+  unit: SimUnit,
+  skill: ArenaSkill,
+  pool: Combatant[],
+): Combatant[] {
+  const state = sim.battle;
+  const actor = unit.c;
+  // Warden: freeze skills hunt the enemy carry (highest attack).
+  if (skill.effect?.status === "freeze") {
+    return [...pool].sort(
+      (a, b) => b.attack - a.attack || a.hp - b.hp || a.slot - b.slot,
+    );
+  }
+  if (actor.classId === "skitter") {
+    return rankFlankTargets(state, actor, skill, pool);
+  }
+  const ranked = rankTargets(state, actor, skill, pool);
+  // Bulwark guard: enemies currently engaging its back/mid-row allies
+  // within guard reach jump the queue (a target-selection weight, not
+  // a hard taunt).
+  if (actor.classId === "bulwark") {
+    const guardOf = (t: Combatant): number => {
+      const foe = sim.byId.get(t.crabId);
+      if (!foe || !foe.targetId) return 1;
+      const victim = sim.byId.get(foe.targetId);
+      if (!victim || victim.c.side !== actor.side) return 1;
+      if (victim.c.row === "front") return 1;
+      const d = Math.hypot(victim.x - unit.x, victim.y - unit.y);
+      return d <= 40 ? 0 : 1;
+    };
+    return ranked.sort((a, b) => guardOf(a) - guardOf(b));
+  }
+  return ranked;
+}
+
 /**
- * Decide the action for `actor` in `state`. Returns null only when
- * there is nobody to act on (battle effectively over).
+ * Decide the current INTENT for `unit` in the simulator. Returns null
+ * only when there is nobody to act on (battle effectively over) or the
+ * unit is incapacitated (frozen crabs never receive a decision).
  */
-export function decideAction(
-  state: ArenaBattleState,
-  actor: Combatant,
+export function decideSimAction(
+  sim: SimState,
+  unit: SimUnit,
 ): PilotDecision | null {
+  const state = sim.battle;
+  const actor = unit.c;
   if (actor.isDefeated) return null;
-  // Incapacitation gate: a frozen crab CANNOT act. The ArenaBattle UI also
-  // consumes the freeze at the start of an actor's turn (consumeFreeze) and
-  // emits the "Frozen" skip action; this guard is defense-in-depth so that
-  // even a caller who forgets the consume step never gets a real decision
-  // for a frozen crab. Stun/dizzy ("pusing") statuses, if introduced later,
-  // should hook in here too.
-  const freeze = actor.statuses.find(
-    (s) => s.id === "freeze" && s.roundsRemaining > 0,
-  );
-  if (freeze) return null;
-  const skills = getSkillsForClass(actor.classId);
-  const usable = skills.filter(
-    (s) => actor.energy >= s.energyCost && (actor.cooldowns[s.id] ?? 0) <= 0,
-  );
+  // Incapacitation gate: a frozen crab CANNOT act.
+  if (isHardCcd(actor)) return null;
+  const usable = usableSkills(sim, unit);
   const allies = aliveOnSide(state, actor.side);
   const enemies = aliveOnSide(state, actor.side === "player" ? "enemy" : "player");
   if (enemies.length === 0) return null;
@@ -174,8 +270,17 @@ export function decideAction(
     (a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.slot - b.slot,
   )[0];
 
-  // 1) HEAL — an ally is critical and a heal is usable.
   const heal = usable.find(isHealSkill);
+
+  // 0) CLEANSE — an ally is hard-CC'd and this unit's heal cleanses.
+  if (heal && actor.classId === "shellmender") {
+    const ccd = allies
+      .filter((a) => isHardCcd(a))
+      .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.slot - b.slot)[0];
+    if (ccd) return { skill: heal, targets: [ccd], reason: "cleanse" };
+  }
+
+  // 1) HEAL — an ally is critical and a heal is usable.
   if (heal && lowestAlly && lowestAlly.hp / lowestAlly.maxHp < HEAL_THRESHOLD) {
     return { skill: heal, targets: [lowestAlly], reason: "heal" };
   }
@@ -232,7 +337,7 @@ export function decideAction(
   for (const skill of damageSkills) {
     if (skill.targetType === "all_enemies") {
       // Single remaining enemy: value the AoE by its hit on the best target.
-      const ranked = rankTargets(state, actor, skill, enemies);
+      const ranked = rankFor(sim, unit, skill, enemies);
       const target = ranked[0];
       const est = estimateDamage(state, actor, skill, target);
       const cand = { skill, target, est, finisher: est >= target.hp };
@@ -245,9 +350,9 @@ export function decideAction(
       }
       continue;
     }
-    const legal = legalEnemyTargets(state, actor, skill);
+    const legal = targetPool(sim, unit, skill);
     if (legal.length === 0) continue;
-    const target = rankTargets(state, actor, skill, legal)[0];
+    const target = rankFor(sim, unit, skill, legal)[0];
     const est = estimateDamage(state, actor, skill, target);
     const cand = { skill, target, est, finisher: est >= target.hp };
     if (
@@ -269,9 +374,11 @@ export function decideAction(
   }
 
   // 5) FALLBACK — Claw Strike at the policy target (energy-starved).
-  const claw = skills[0];
-  const legal = legalEnemyTargets(state, actor, claw);
+  // (Only reachable when the claw itself is on its basic cycle clock —
+  // otherwise the claw was already among the damage skills above.)
+  const claw = getSkillsForClass(actor.classId)[0];
+  const legal = targetPool(sim, unit, claw);
   if (legal.length === 0) return null;
-  const target = rankTargets(state, actor, claw, legal)[0];
+  const target = rankFor(sim, unit, claw, legal)[0];
   return { skill: claw, targets: [target], reason: "fallback" };
 }
