@@ -905,8 +905,20 @@ function startAction(sim: SimState, unit: SimUnit, intent: SimIntent): void {
   } else if (skill.cooldown > 0) {
     unit.skillReadyAt[skill.id] = now + skill.cooldown * ROUND_MS;
   }
+  // Delivery follows the unit's range profile: contact-band classes
+  // strike in melee, while ranged/caster classes (Warden bolts,
+  // Tidecaller casts — design §5.2) deliver even a melee-profile
+  // single-target skill as a projectile, so its damage lands on
+  // arrival at band range instead of striking instantly from 30%+
+  // away. (Without this, a Warden drip-spends its energy on 1-cost
+  // basics and its cost-4/5 cast skills never become usable — it
+  // would never fire a projectile at all.)
+  const role = roleOf(unit.c.classId);
   const isMeleeHit =
-    skill.targetType === "enemy" && skillRange(skill) === "melee";
+    skill.targetType === "enemy" &&
+    skillRange(skill) === "melee" &&
+    role !== "ranged" &&
+    role !== "caster";
   const isAoe = skill.targetType === "all_enemies";
   const windup = isMeleeHit
     ? WINDUP_MS.strike
