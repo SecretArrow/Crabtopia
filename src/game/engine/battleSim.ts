@@ -1315,6 +1315,22 @@ function moveUnit(sim: SimState, unit: SimUnit, dtMs: number): void {
       } else {
         nx = other.x + (ddx / d) * SEPARATION;
         ny = other.y + (ddy / d) * SEPARATION;
+        // Tangential slide: a purely radial push deadlocks head-on —
+        // a unit whose goal lies directly behind a blocker is snapped
+        // back to the identical point every tick and never gets past
+        // (an assassin could never reach the backline, design §5.2).
+        // Slide along the blocker's circle toward the goal instead.
+        // The side comes from the goal direction, with a stable
+        // slot-parity tiebreak for perfectly collinear approaches —
+        // no RNG, so determinism is preserved.
+        const tx = -ddy / d;
+        const ty = ddx / d;
+        const toward = tx * (goal.x - nx) + ty * (goal.y - ny);
+        const dir =
+          toward !== 0 ? Math.sign(toward) : unit.c.slot % 2 === 0 ? 1 : -1;
+        const slide = Math.min((speed * dtMs) / 1000, SEPARATION * 0.6);
+        nx += tx * dir * slide;
+        ny += ty * dir * slide;
       }
     }
   }
