@@ -23,13 +23,34 @@ import {
   type SimUnit,
 } from "../../src/game/engine/battleSim";
 import { generateCrab } from "../../src/game/engine/crabs";
-import type { ClassId } from "../../src/game/types";
+import type { ClassId, Crab } from "../../src/game/types";
 
 let uid = 0;
-function combatant(classId: ClassId, side: "player" | "enemy", level = 10): Combatant {
+function mkCrab(classId: ClassId, level = 10, isRookie = false): Crab {
   uid += 1;
-  const crab = generateCrab({ classId, level, seed: 9000 + uid });
-  return makeCombatant(crab, side, 0);
+  return generateCrab({ classId, level, seed: 9000 + uid, isRookie });
+}
+
+function combatant(classId: ClassId, side: "player" | "enemy", level = 10): Combatant {
+  return makeCombatant(mkCrab(classId, level), side, 0);
+}
+
+/**
+ * A rookie target. "Rookie" is NOT a class in this game's data model:
+ * ClassId has eight members and BREEDS_BY_CLASS is built only from
+ * those eight, so generateCrab({ classId: "rookie" }) crashes in the
+ * breed pick (crabs.ts → rng pick of undefined). The game itself makes
+ * rookies as a real class carrying the rookie flag (gameStore starter
+ * generation: generateCrab({ classId, isRookie: true })). A pincher
+ * rookie carries no class tenacity — exactly the zero-tenacity target
+ * these tests want.
+ *
+ * Likewise, initBattle takes CRABS and builds the combatants itself
+ * (the battleSim.test.ts pattern); the seed-shopping tests below pass
+ * mkCrab results to initBattle and read state.player/enemy back out.
+ */
+function rookieCombatant(side: "player" | "enemy", level = 10): Combatant {
+  return makeCombatant(mkCrab("pincher", level, true), side, 0);
 }
 
 function simOf(player: Combatant[], enemy: Combatant[]): SimState {
@@ -79,7 +100,7 @@ describe("tenacityChance", () => {
     const bulwark = combatant("bulwark", "enemy", 10);
     // 0.05 base + 0.15 bulwark, same level.
     expect(tenacityChance(attacker, bulwark)).toBeCloseTo(0.2);
-    const rookie = combatant("rookie", "enemy", 10);
+    const rookie = rookieCombatant("enemy", 10);
     expect(tenacityChance(attacker, rookie)).toBeCloseTo(0.05);
   });
 
@@ -98,8 +119,8 @@ describe("tenacityChance", () => {
 describe("diminishing returns ladder", () => {
   it("2000 → 1000 → 500 ms, then immunity converts the 4th to slow", () => {
     const outcome = shop((seed) => {
-      const warden = combatant("warden", "player");
-      const target = combatant("rookie", "enemy");
+      const warden = mkCrab("warden");
+      const target = mkCrab("pincher", 10, true);
       const state = initBattle([warden], [target], seed);
       const spawns = { [warden.id]: { x: 30, y: 50 }, [target.id]: { x: 70, y: 50 } };
       const sim = createSim(state, spawns);
@@ -112,6 +133,12 @@ describe("diminishing returns ladder", () => {
         clearFreeze(tgt.c);
       }
       const fourth = applyHardCc(sim, src, tgt);
+      // The ladder's 4th step is specifically the DR-immunity
+      // conversion — keep shopping if a tenacity roll (5% for this
+      // target) happened to convert it first instead.
+      if (fourth !== "converted" || tgt.ccImmuneUntil !== CC_IMMUNITY_MS) {
+        return null;
+      }
       return { sim, tgt, durations, fourth };
     });
     expect(outcome.durations).toEqual([2000, 1000, 500]);
@@ -127,7 +154,7 @@ describe("diminishing returns ladder", () => {
 
   it("a shielded target is CC-immune: freeze converts to slow instead", () => {
     const warden = combatant("warden", "player");
-    const target = combatant("rookie", "enemy");
+    const target = rookieCombatant("enemy");
     target.statuses.push({
       id: "shield",
       durationMs: 60000,
@@ -144,7 +171,7 @@ describe("diminishing returns ladder", () => {
 describe("hard-CC uptime cap (40% of the rolling 10s window)", () => {
   it("a target already frozen 3.9s in-window can only be slowed", () => {
     const warden = combatant("warden", "player");
-    const target = combatant("rookie", "enemy");
+    const target = rookieCombatant("enemy");
     const sim = simOf([warden], [target]);
     const tgt = unitOf(sim, target);
     // 3900ms of the last 10s already spent frozen → 100ms of budget
@@ -158,8 +185,8 @@ describe("hard-CC uptime cap (40% of the rolling 10s window)", () => {
 
   it("with 200ms of budget left, the freeze lands capped at 200ms", () => {
     const applied = shop((seed) => {
-      const warden = combatant("warden", "player");
-      const target = combatant("rookie", "enemy");
+      const warden = mkCrab("warden");
+      const target = mkCrab("pincher", 10, true);
       const state = initBattle([warden], [target], seed);
       const spawns = { [warden.id]: { x: 30, y: 50 }, [target.id]: { x: 70, y: 50 } };
       const sim = createSim(state, spawns);
@@ -176,9 +203,9 @@ describe("hard-CC uptime cap (40% of the rolling 10s window)", () => {
 describe("tenacity resist", () => {
   it("a resisted freeze converts to slow and consumes no DR step", () => {
     const outcome = shop((seed) => {
-      const warden = combatant("warden", "player");
+      const warden = mkCrab("warden");
       // Bulwark: 20% tenacity at equal level — findable by seed.
-      const target = combatant("bulwark", "enemy");
+      const target = mkCrab("bulwark");
       const state = initBattle([warden], [target], seed);
       const spawns = { [warden.id]: { x: 30, y: 50 }, [target.id]: { x: 70, y: 50 } };
       const sim = createSim(state, spawns);
@@ -199,8 +226,8 @@ describe("tenacity resist", () => {
 
   it("resist rolls are deterministic for a fixed seed", () => {
     const run = (seed: number) => {
-      const warden = combatant("warden", "player");
-      const target = combatant("bulwark", "enemy");
+      const warden = mkCrab("warden");
+      const target = mkCrab("bulwark");
       const state = initBattle([warden], [target], seed);
       const spawns = { [warden.id]: { x: 30, y: 50 }, [target.id]: { x: 70, y: 50 } };
       const sim = createSim(state, spawns);
