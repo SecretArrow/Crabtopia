@@ -44,7 +44,26 @@ async function deployToBattle(page: Page): Promise<void> {
   }
   await page.locator("main button:has-text('Deploy')").first().click({ force: true });
   await page.waitForTimeout(4500);
-  await expect(page.locator("text=/Turn \\d+/")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId("battle-timer")).toBeVisible({ timeout: 10000 });
+}
+
+/** Live sim positions of every unit on the field, keyed by crab id. */
+async function unitPositions(
+  page: Page,
+): Promise<Record<string, { x: number; y: number }>> {
+  const els = page.locator(
+    '[data-testid="battle-arena"] [data-crab-id]',
+  );
+  return els.evaluateAll((nodes) => {
+    const out: Record<string, { x: number; y: number }> = {};
+    for (const el of nodes) {
+      const id = el.getAttribute("data-crab-id");
+      const x = Number(el.getAttribute("data-unit-x"));
+      const y = Number(el.getAttribute("data-unit-y"));
+      if (id && Number.isFinite(x) && Number.isFinite(y)) out[id] = { x, y };
+    }
+    return out;
+  });
 }
 
 /** Inner text of the battle-log entries container. */
@@ -63,6 +82,21 @@ test("battle runs itself: actions happen with no input, result completes", async
   // No manual controls exist in the auto battler.
   await expect(page.locator("button[data-skill-profile]")).toHaveCount(0);
   await expect(page.locator("text=Pick a skill")).toHaveCount(0);
+
+  // REAL-TIME: units actually MOVE — positions change on their own as
+  // melee closes in and ranged repositions (no input from us).
+  const before = await unitPositions(page);
+  expect(Object.keys(before).length).toBe(10);
+  await page.waitForTimeout(2500);
+  const after = await unitPositions(page);
+  let moved = 0;
+  for (const id of Object.keys(before)) {
+    if (!after[id]) continue;
+    const dx = after[id].x - before[id].x;
+    const dy = after[id].y - before[id].y;
+    if (Math.hypot(dx, dy) > 1) moved += 1;
+  }
+  expect(moved).toBeGreaterThanOrEqual(3);
 
   // Actions appear in the log on their own (the pilot plays both teams).
   await expect
@@ -116,6 +150,12 @@ test("pause halts the action chain and play resumes it", async ({ page }) => {
     clockAtPause,
   );
 
+  // The freeze is positional too: every unit stands exactly where it
+  // was when the battle paused (the sim receives zero battle-time).
+  const frozenPos = await unitPositions(page);
+  await page.waitForTimeout(1500);
+  expect(await unitPositions(page)).toEqual(frozenPos);
+
   // Play: the clock advances again and actions resume (log moves).
   await page.getByTestId("battle-pause-toggle").click({ force: true });
   await expect(arena).toHaveAttribute("data-battle-paused", "false");
@@ -128,4 +168,31 @@ test("pause halts the action chain and play resumes it", async ({ page }) => {
   await expect
     .poll(async () => logText(page), { timeout: 20000, intervals: [400] })
     .not.toBe(frozen);
+});
+
+test("fallen crabs become tombstones at their death position; skip still resolves", async ({
+  page,
+}) => {
+  await deployToBattle(page);
+  // Speed the fight up and watch for the first tombstone: a dead crab
+  // must NEVER linger as a living sprite — its field slot turns into
+  // the shell-stone marker where it fell.
+  await page
+    .locator('[data-testid="battle-speed-btn"][data-speed="3"]')
+    .click({ force: true });
+  await expect(page.getByTestId("tombstone").first()).toBeVisible({
+    timeout: 90000,
+  });
+  // The tombstone sits inside the arena (at the death position).
+  const arenaBox = await page.getByTestId("battle-arena").boundingBox();
+  const tombBox = await page.getByTestId("tombstone").first().boundingBox();
+  expect(arenaBox).toBeTruthy();
+  expect(tombBox).toBeTruthy();
+  expect(tombBox!.x).toBeGreaterThanOrEqual(arenaBox!.x - 4);
+  expect(tombBox!.x).toBeLessThanOrEqual(arenaBox!.x + arenaBox!.width);
+
+  // Skip from here still lands on the normal result screen.
+  await page.getByTestId("battle-skip").click({ force: true });
+  const resultDialog = page.getByRole("dialog", { name: /DEFEATED|VICTORY/i });
+  await expect(resultDialog).toBeVisible({ timeout: 15000 });
 });

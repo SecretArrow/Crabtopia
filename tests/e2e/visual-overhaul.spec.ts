@@ -131,7 +131,7 @@ test.describe("Skill profiles in battle", () => {
       .click({ force: true });
     await page.waitForTimeout(6500);
 
-    await expect(page.locator("text=/Turn \\d+/")).toBeVisible({
+    await expect(page.getByTestId("battle-timer")).toBeVisible({
       timeout: 10000,
     });
 
@@ -245,7 +245,7 @@ test.describe("Skill profiles in battle", () => {
       .locator("main button:has-text('Deploy')")
       .first()
       .click({ force: true });
-    await expect(page.locator("text=/Turn \\d+/")).toBeVisible({
+    await expect(page.getByTestId("battle-timer")).toBeVisible({
       timeout: 15000,
     });
     // Cycle actions faster so several attackers act within the poll.

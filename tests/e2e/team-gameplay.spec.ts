@@ -57,7 +57,7 @@ test.describe("Team-based gameplay", () => {
     // Deploy starts the battle on the 5v5 row grid.
     await page.locator("main button:has-text('Deploy')").first().click({ force: true });
     await page.waitForTimeout(6500);
-    await expect(page.locator("text=/Turn \\d+/")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("battle-timer")).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="battle-row-player-front"]')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('[data-testid="battle-row-enemy-front"]')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('[data-testid="battle-row-player-back"]')).toBeVisible({ timeout: 5000 });

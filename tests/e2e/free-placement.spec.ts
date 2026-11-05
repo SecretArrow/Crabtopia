@@ -156,7 +156,7 @@ test.describe("Free placement — 3-row × 5-lane deployment board", () => {
       .locator("main button:has-text('Deploy')")
       .first()
       .click({ force: true });
-    await expect(page.locator("text=/Turn \\d+/")).toBeVisible({
+    await expect(page.getByTestId("battle-timer")).toBeVisible({
       timeout: 15000,
     });
   });

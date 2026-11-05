@@ -57,7 +57,7 @@ async function enterArenaBattle(page: import("@playwright/test").Page): Promise<
   await page.waitForTimeout(4000);
 
   // Battle screen.
-  await expect(page.locator("text=/Turn \\d+/")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId("battle-timer")).toBeVisible({ timeout: 10000 });
 }
 
 test.describe("Button functionality", () => {
@@ -133,7 +133,7 @@ test.describe("Button functionality", () => {
     // reflecting the active speed. We click each and assert the click
     // is accepted (aria-pressed flips).
     const speedContainer = page.locator(
-      "header:has-text('Turn') >> button[aria-pressed]",
+      "header >> button[aria-pressed]",
     );
     await expect(speedContainer.nth(0)).toBeVisible({ timeout: 5000 });
 

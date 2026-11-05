@@ -90,11 +90,11 @@ test.describe("Arena flow", () => {
     // Loading completes after ~3.25s (3s progress + 250ms finish pause).
     await page.waitForTimeout(4000);
 
-    // Battle screen (FULL AUTO BATTLER): the Turn pill is visible and
-    // actions happen BY THEMSELVES — the battle log shows the pilot's
+    // Battle screen (REAL-TIME AUTO BATTLER): the battle timer pill is
+    // visible and actions happen BY THEMSELVES — the battle log shows the pilot's
     // first casts ("X casts …") without any skill/target clicking, and
     // the spectator controls are present.
-    await expect(page.locator("text=/Turn \\d+/")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("battle-timer")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("text=/casts/").first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId("battle-pause-toggle")).toBeVisible();
     await expect(page.getByTestId("battle-skip")).toBeVisible();

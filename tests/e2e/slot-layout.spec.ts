@@ -4,11 +4,12 @@
 //   1. The deployment board renders the SAME slot map as the battle
 //      (10 slot anchors, unique data-slot keys, slot boxes that never
 //      overlap, per-class original art in the member buttons).
-//   2. In battle, all 10 crabs stand on their anchors; at rest their
-//      sprites never overlap.
+//   2. In battle, all 10 crabs SPAWN on their anchors (the deployment
+//      arrangement), then move freely — the sim's separation steering
+//      keeps their centres apart while they fight.
 //   3. Desktop 1440x900: battle sprites are large again (>= 115px wide,
 //      up from the old fixed 72–92px).
-//   4. Mobile 390x844: all 10 crabs stay inside the arena, anchors
+//   4. Mobile 390x844: all 10 crabs stay inside the arena while moving, centres
 //      never overlap.
 
 import { test, expect, type Page } from "@playwright/test";
@@ -52,7 +53,7 @@ async function deployToBattle(page: Page) {
     .locator("main button:has-text('Deploy')")
     .first()
     .click({ force: true });
-  await expect(page.locator("text=/Turn \\d+/")).toBeVisible({
+  await expect(page.getByTestId("battle-timer")).toBeVisible({
     timeout: 15000,
   });
   await page.waitForTimeout(1200);
@@ -141,16 +142,16 @@ test.describe("Option A — anchored slot layout", () => {
     expect(await board.locator('img[data-testid="crab-art"]').count()).toBe(0);
   });
 
-  test("battle: 10 anchored slots, unique keys, sprites never overlap at rest", async ({
+  test("battle: units spawn on their anchors, then move with separation", async ({
     page,
   }) => {
     await deployToBattle(page);
 
-    const anchors = page.locator(
-      '[data-testid="battle-arena"] [data-testid="slot-anchor"]',
+    const units = page.locator(
+      '[data-testid="battle-arena"] [data-crab-id]',
     );
-    await expect(anchors).toHaveCount(10);
-    const keys = await anchors.evaluateAll((els) =>
+    await expect(units).toHaveCount(10);
+    const keys = await units.evaluateAll((els) =>
       els.map((el) => el.getAttribute("data-slot") ?? ""),
     );
     expect(new Set(keys).size).toBe(10);
@@ -160,34 +161,62 @@ test.describe("Option A — anchored slot layout", () => {
       page.locator('[data-testid="battle-arena"] [data-testid="slot-marker"]'),
     ).toHaveCount(10);
 
-    // The slot boxes themselves are fixed by the layout — never overlap.
-    const boxRects = await rectsOf(
-      page,
-      '[data-testid="battle-arena"] [data-testid="slot-anchor"]',
+    // Spawn sanity (positions sampled shortly after deploy — units may
+    // already be stepping, so assert the formation's ordering rather
+    // than exact pixels): each side holds its own half, and a side's
+    // front row is closer to the centre line than its back row.
+    const spawn = await units.evaluateAll((els) =>
+      els.map((el) => ({
+        side: el.getAttribute("data-side"),
+        row: el.getAttribute("data-row"),
+        x: Number(el.getAttribute("data-unit-x")),
+      })),
     );
-    expect(anyOverlap(boxRects)).toBe(false);
+    for (const u of spawn) {
+      if (u.side === "player") expect(u.x).toBeLessThan(58);
+      else expect(u.x).toBeGreaterThan(42);
+    }
+    for (const side of ["player", "enemy"] as const) {
+      const front = spawn.filter((u) => u.side === side && u.row === "front");
+      const back = spawn.filter((u) => u.side === side && u.row === "back");
+      if (front.length && back.length) {
+        const f = Math.min(...front.map((u) => Math.abs(u.x - 50)));
+        const b = Math.min(...back.map((u) => Math.abs(u.x - 50)));
+        expect(f).toBeLessThan(b);
+      }
+    }
 
-    // Sprites: sample until a resting moment is observed (actions move
-    // crabs on purpose); the resting layout must be overlap-free. A
-    // broken layout would never produce a clean sample.
-    await expect
-      .poll(
-        async () => {
-          const sprites = await rectsOf(
-            page,
-            '[data-testid="battle-arena"] [data-testid="slot-anchor"] [data-testid="animated-crab"]',
-          );
-          if (sprites.length !== 10) return false;
-          return !anyOverlap(sprites);
-        },
-        { timeout: 25000, intervals: [400] },
-      )
-      .toBe(true);
+    // While the fight runs, the sim's separation steering keeps unit
+    // CENTRES at least ~24px apart at every sampled moment (units may
+    // press into melee range, but they never stack onto one point).
+    const centres = async (): Promise<{ x: number; y: number }[]> =>
+      units.evaluateAll((els) =>
+        els.map((el) => {
+          const r = el.getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        }),
+      );
+    for (let s = 0; s < 6; s++) {
+      const pts = await centres();
+      expect(pts.length).toBe(10);
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
+          expect(d).toBeGreaterThanOrEqual(22);
+        }
+      }
+      await page.waitForTimeout(700);
+    }
   });
 
   test("desktop 1440x900: battle sprites are large", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await deployToBattle(page);
+    await expect(
+      page.locator(
+        '[data-testid="battle-arena"] [data-testid="animated-crab"]',
+      ),
+    ).toHaveCount(10, { timeout: 10000 });
     const sprites = await rectsOf(
       page,
       '[data-testid="battle-arena"] [data-testid="animated-crab"]',
@@ -198,7 +227,7 @@ test.describe("Option A — anchored slot layout", () => {
     }
   });
 
-  test("mobile 390x844: all crabs inside the arena, no overlap", async ({
+  test("mobile 390x844: all crabs inside the arena, centres separated", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -209,12 +238,26 @@ test.describe("Option A — anchored slot layout", () => {
       .boundingBox();
     expect(arena).toBeTruthy();
 
-    const boxRects = await rectsOf(
+    // Units move freely now, but the sim's field clamps + separation
+    // keep every unit inside the arena and off its neighbours.
+    const unitRects = await rectsOf(
       page,
-      '[data-testid="battle-arena"] [data-testid="slot-anchor"]',
+      '[data-testid="battle-arena"] [data-crab-id]',
     );
-    expect(boxRects.length).toBe(10);
-    expect(anyOverlap(boxRects)).toBe(false);
+    expect(unitRects.length).toBe(10);
+    const centres = unitRects.map((r) => ({
+      x: r.x + r.width / 2,
+      y: r.y + r.height / 2,
+    }));
+    for (let i = 0; i < centres.length; i++) {
+      for (let j = i + 1; j < centres.length; j++) {
+        const d = Math.hypot(
+          centres[i].x - centres[j].x,
+          centres[i].y - centres[j].y,
+        );
+        expect(d).toBeGreaterThanOrEqual(20);
+      }
+    }
 
     const sprites = await rectsOf(
       page,

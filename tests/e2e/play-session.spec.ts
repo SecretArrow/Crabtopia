@@ -180,7 +180,7 @@ test("full session: buy → complete team → arena battle to result", async ({
     .locator("button:has-text('Deploy')")
     .last()
     .click({ force: true });
-  await expect(page.locator("text=/Turn \\d+/").first()).toBeVisible({
+  await expect(page.getByTestId("battle-timer")).toBeVisible({
     timeout: 20000,
   });
 

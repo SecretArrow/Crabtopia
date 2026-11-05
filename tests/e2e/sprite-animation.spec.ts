@@ -94,7 +94,7 @@ test.describe("Sprite animation system", () => {
     await page.waitForTimeout(6500);
 
     // Battle screen reached.
-    await expect(page.locator("text=/Turn \\d+/")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("battle-timer")).toBeVisible({ timeout: 10000 });
 
     // New-system sprites are on the field (sheet-animated and/or rig).
     const sprites = page.locator(
@@ -106,20 +106,26 @@ test.describe("Sprite animation system", () => {
     // Particle canvas mounted in the arena.
     await expect(page.locator('[data-testid="particle-layer"]')).toBeAttached();
 
-    // The battle is a full auto battler: actions play on their own and
-    // animation states must leave "idle" (attack / skill / hit /
-    // death…) on at least one crab without any clicking.
+    // The battle is a real-time auto battler: units MOVE on their own,
+    // so locomotion states (walk / run) must appear — movement speed
+    // drives the animation state, there is no static-image sliding —
+    // and action states (attack / skill / hit / death…) follow.
+    const seenStates = new Set<string>();
     await expect
       .poll(
         async () => {
           const states = await sprites.evaluateAll((els) =>
             els.map((el) => el.getAttribute("data-anim-state")),
           );
-          return states.some((s) => s !== null && s !== "idle");
+          for (const s of states) if (s) seenStates.add(s);
+          return seenStates.has("walk") || seenStates.has("run");
         },
-        { timeout: 30000, intervals: [500] },
+        { timeout: 30000, intervals: [300] },
       )
       .toBe(true);
+    expect(
+      [...seenStates].some((s) => s !== "idle"),
+    ).toBe(true);
 
     expect(failedSpriteRequests, failedSpriteRequests.join("\n")).toEqual([]);
     expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
