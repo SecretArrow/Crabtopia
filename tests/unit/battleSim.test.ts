@@ -12,6 +12,7 @@ import {
   hashSimEvents,
   distanceBetween,
   MELEE_REACH,
+  SEPARATION,
   type SimEvent,
   type SimState,
   type SimUnit,
@@ -215,6 +216,46 @@ describe("battleSim — role movement", () => {
       }
     }
     expect(firstStrike).toBe(backline.id);
+  });
+});
+
+describe("battleSim — standing separation", () => {
+  it("attackers converging on one target ring it instead of stacking", () => {
+    const attackers = [0, 1, 2].map((i) => mk("reaver", 50 + i, 10));
+    // Unkillable target so the scrum persists for the whole sample.
+    const target = mk("bulwark", 60, 10, { hp: 100000, attack: 1 });
+    const sim = simOf(attackers, [target], 17, {
+      [attackers[0].id]: { x: 20, y: 35 },
+      [attackers[1].id]: { x: 20, y: 50 },
+      [attackers[2].id]: { x: 20, y: 65 },
+      [target.id]: { x: 60, y: 50 },
+    });
+    // Let the scrum form, then sample the closing seconds: the
+    // standing per-tick separation must hold EVERY living pair at
+    // personal-space distance while the attackers stay in contact
+    // range of their shared target (a ring, not a pile and not a
+    // shove-off).
+    stepSim(sim, 6000);
+    let minPair = Infinity;
+    let maxToTarget = 0;
+    for (let t = 0; t < 4000; t += 50) {
+      stepSim(sim, 50);
+      const alive = sim.units.filter((u) => !u.c.isDefeated);
+      for (let i = 0; i < alive.length; i++) {
+        for (let j = i + 1; j < alive.length; j++) {
+          minPair = Math.min(minPair, distanceBetween(alive[i], alive[j]));
+        }
+      }
+      const tgt = unit(sim, target.id);
+      for (const atk of attackers) {
+        maxToTarget = Math.max(
+          maxToTarget,
+          distanceBetween(unit(sim, atk.id), tgt),
+        );
+      }
+    }
+    expect(minPair).toBeGreaterThanOrEqual(SEPARATION - 0.05);
+    expect(maxToTarget).toBeLessThanOrEqual(16);
   });
 });
 
