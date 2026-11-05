@@ -21,7 +21,8 @@ export type StatusEffectId =
   | "freeze"
   | "defense_down"
   | "regen"
-  | "shield";
+  | "shield"
+  | "slow";
 
 // ---------------------------------------------------------------------------
 // DamageNumber — floating number that rises and fades. Variant colors per
@@ -178,15 +179,18 @@ const STATUS_ICONS: Record<StatusEffectId, string> = {
   defense_down: "🛡️↓",
   regen: "✨",
   shield: "🛡️",
+  slow: "🐌",
 };
 
 export function StatusEffectIcon({
   status,
-  rounds,
+  durationMs,
 }: {
   status: StatusEffectId;
-  rounds: number;
+  /** Remaining duration in battle-ms — displayed as whole seconds. */
+  durationMs: number;
 }): React.ReactNode {
+  const seconds = Math.max(1, Math.ceil(durationMs / 1000));
   return (
     <motion.div
       className="rounded-md flex items-center justify-center"
@@ -200,14 +204,14 @@ export function StatusEffectIcon({
       }}
       animate={{ scale: [1, 1.08, 1] }}
       transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-      title={`${status} — ${rounds} round${rounds === 1 ? "" : "s"} remaining`}
+      title={`${status} — ${seconds}s remaining`}
     >
       <span aria-hidden>{STATUS_ICONS[status]}</span>
       <span
         className="ml-0.5 text-[9px] font-bold"
         style={{ color: "rgba(234,246,255,0.7)" }}
       >
-        {rounds}
+        {seconds}s
       </span>
     </motion.div>
   );
@@ -219,7 +223,7 @@ export function StatusEffectIcon({
 export function StatusEffectRow({
   statuses,
 }: {
-  statuses: { id: StatusEffectId; roundsRemaining: number }[];
+  statuses: { id: StatusEffectId; durationMs: number }[];
 }): React.ReactNode {
   const visible = statuses.slice(0, 5);
   const overflow = statuses.length - visible.length;
@@ -229,7 +233,7 @@ export function StatusEffectRow({
         <StatusEffectIcon
           key={`${s.id}-${i}`}
           status={s.id}
-          rounds={s.roundsRemaining}
+          durationMs={s.durationMs}
         />
       ))}
       {overflow > 0 && (
