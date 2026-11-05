@@ -88,17 +88,8 @@ const SCREENS: ScreenCase[] = [
       ).toBeVisible();
     },
   },
-  {
-    nav: "Breeding",
-    identify: /Nursery Spire|Breed/i,
-    primary: async (page) => {
-      await expect(
-        page
-          .locator("main button:has([data-testid='crab-sprite'])")
-          .first(),
-      ).toBeVisible();
-    },
-  },
+  // (No separate "Breeding" destination: breeding lives in the Nursery
+  // below — one canonical surface, one nav entry.)
   {
     nav: "Crafting",
     identify: /Tide Forge|Recipes/i,

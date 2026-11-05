@@ -1,7 +1,8 @@
 // E2E for the 18-element system: element badges on cards and the
-// detail modal, the breeding "Child Element Possibilities" panel
-// panel (recipe-aware, computed from the actual parents picked), and
-// the Codex elements section listing all 18 elements + recipe table.
+// detail modal, the "Child Element Possibilities" panel in the Nursery
+// (the game's ONE breeding surface; recipe-aware, computed from the
+// actual parents picked), and the Codex elements section listing all
+// 18 elements + recipe table.
 import { test, expect, type Page } from "@playwright/test";
 import { completeOnboarding, resetGameSave, skipTutorial } from "./helpers";
 
@@ -26,18 +27,40 @@ const ALL_ELEMENTS = [
   "pulvara", "terika", "obsidara", "prismara", "andhakara", "waja",
 ];
 
-test("breeding screen shows parent elements and the child-possibilities panel", async ({
+test("nursery (the one breeding surface) shows parent elements and the child-possibilities panel", async ({
   page,
 }) => {
-  await page.getByText("Breeding", { exact: true }).first().click();
+  // A fresh save fields only ROOKIES, and the canonical Nursery flow
+  // rejects rookies — graduate the first two starters in the persisted
+  // save (same save-edit pattern as the CrabCard test below) so the
+  // parent picker offers them.
+  await page.evaluate(() => {
+    const raw = localStorage.getItem("crabtopia-save");
+    if (!raw) throw new Error("persisted save not found");
+    const data = JSON.parse(raw);
+    const crabs = data.state.player.crabs as Array<{ isRookie: boolean }>;
+    crabs[0].isRookie = false;
+    crabs[1].isRookie = false;
+    localStorage.setItem("crabtopia-save", JSON.stringify(data));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+  await skipTutorial(page);
 
-  // Roster entries are buttons wrapping a crab sprite.
-  const roster = page.locator("button:has([data-testid='crab-sprite'])");
-  await expect(roster.first()).toBeVisible({ timeout: 20_000 });
-  expect(await roster.count()).toBeGreaterThanOrEqual(2);
+  await page.getByText("Nursery", { exact: true }).first().click();
 
-  await roster.nth(0).click();
-  await roster.nth(1).click();
+  // Pick both parents through the canonical Radix popover picker
+  // (rows are buttons wrapping a crab renderer; the already-picked
+  // parent is excluded from the second picker's list).
+  const rows = page.locator(
+    "[data-radix-popper-content-wrapper] button:has([data-testid='crab-renderer'])",
+  );
+  await page.getByRole("button", { name: "Pick Parent A" }).click();
+  await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+  await rows.nth(0).click();
+  await page.getByRole("button", { name: "Pick Parent B" }).click();
+  await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+  await rows.nth(0).click();
 
   // Both parent slots now carry an element badge (first two badges in
   // DOM order are the Parent A / Parent B slots).

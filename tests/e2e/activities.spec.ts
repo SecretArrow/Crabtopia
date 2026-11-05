@@ -1,6 +1,7 @@
 // Crabtopia E2E — Activity screens smoke tests.
 //
-// Covers Mining, Exploration, Breeding, Crafting, and Inventory. Each test
+// Covers Mining, Exploration, the Nursery (breeding), Crafting, and
+// Inventory. Each test
 // completes onboarding (so the player has 2000 gold and 3 default crabs),
 // clicks into the activity via the sidebar nav, and asserts the screen's
 // key UI markers render. Where safe, we also drive one interaction and verify
@@ -45,13 +46,14 @@ test.describe("Activities", () => {
     await expect(page.locator("text=/3\\/3/").first()).toBeVisible({ timeout: 5000 });
   });
 
-  test("breeding screen shows parent slots and Breed button", async ({ page }) => {
+  test("nursery is the single breeding surface: parent slots and Breed button", async ({ page }) => {
     await completeOnboarding(page);
-    await page.locator("nav button:has-text('Breeding')").first().click({ force: true });
+    await page.locator("nav button:has-text('Nursery')").first().click({ force: true });
     await page.waitForTimeout(1500);
 
-    // Breeding screen header.
-    await expect(page.locator("text=/Nursery Spire|Breed/i").first()).toBeVisible({ timeout: 5000 });
+    // Nursery header (breeding lives here — there is no separate
+    // Breeding screen or nav entry anymore).
+    await expect(page.locator("text=/Nursery|Breed/i").first()).toBeVisible({ timeout: 5000 });
 
     // Parent A and Parent B slots visible.
     await expect(page.locator("text=Parent A")).toBeVisible({ timeout: 5000 });

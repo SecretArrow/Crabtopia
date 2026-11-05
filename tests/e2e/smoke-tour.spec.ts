@@ -24,7 +24,6 @@ test.describe("Smoke tour — every screen + every modal", () => {
       ["Home", /Tides|Home|Shellwarden|Deploy/i],
       ["Mining", /Crystal Mines|mining energy/i],
       ["Explore", /Tide Wilderness|exploration tickets/i],
-      ["Breeding", /Nursery Spire|Breed/i],
       ["Crafting", /Tide Forge|Recipes/i],
       ["Inventory", /Vault|Materials/i],
       ["Codex", /Codex|Elements/i],
@@ -113,8 +112,9 @@ test.describe("Smoke tour — every screen + every modal", () => {
     await page.waitForTimeout(300);
     await expect(page.locator("button:has-text('Materials')").first()).toBeVisible();
 
-    // Breeding: roster is pickable (parent slots selectable).
-    await page.locator("nav button:has-text('Breeding')").first().click({ force: true });
+    // Breeding (in the Nursery — the single breeding surface): parent
+    // slots are selectable.
+    await page.locator("nav button:has-text('Nursery')").first().click({ force: true });
     await page.waitForTimeout(700);
     await expect(page.locator("text=/Pick|Parent|roster/i").first()).toBeVisible();
 
