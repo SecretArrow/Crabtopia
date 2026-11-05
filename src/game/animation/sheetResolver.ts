@@ -13,8 +13,9 @@
 //
 // Faction variants are produced with a CSS hue-rotate tint computed from the
 // sheet's native faction, so a Frostshelf Warden reads icy-blue (native,
-// shift 0) while a Cinderreef Warden reads warm orange-red. Rookies use the
-// pincher sheet with a kelp-green tint (their classic rookie-kelp look).
+// shift 0) while a Cinderreef Warden reads warm orange-red. Visual identity
+// is ALWAYS the crab's class: rookie is a rank label only — it is not a
+// resolver input and never changes a crab's sheet or tint.
 
 import type { ClassId, FactionId } from "../types";
 
@@ -154,22 +155,15 @@ const FACTION_HUE: Record<SheetKey, Record<FactionId, number>> = {
   },
 };
 
-/** Kelp-green tint for rookie crabs (pincher sheet → rookie-kelp look). */
-export const ROOKIE_HUE_ROTATE = 110;
-
 export interface CrabSheetIdentity {
   classId: ClassId;
   faction: FactionId;
-  isRookie?: boolean;
 }
 
 /** Resolve the sheet + tint for any crab identity. Never returns null. */
 export function resolveSheetDescriptor(
   crab: CrabSheetIdentity,
 ): SheetDescriptor {
-  if (crab.isRookie) {
-    return { key: "pincher", hueRotate: ROOKIE_HUE_ROTATE };
-  }
   const key = CLASS_SHEET[crab.classId];
   const hueRotate =
     crab.faction === SHEET_NATIVE_FACTION[key]

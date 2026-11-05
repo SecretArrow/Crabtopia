@@ -30,7 +30,6 @@ export interface CrabSheetSpriteProps extends CrabSheetIdentity {
 export default function CrabSheetSprite({
   classId,
   faction,
-  isRookie,
   size = 96,
   state = "idle",
   speed = 1,
@@ -38,7 +37,7 @@ export default function CrabSheetSprite({
   facing = "right",
   onAnimEvent,
 }: CrabSheetSpriteProps): React.ReactNode {
-  const desc = resolveSheetDescriptor({ classId, faction, isRookie });
+  const desc = resolveSheetDescriptor({ classId, faction });
   const style: React.CSSProperties = {};
   const transforms: string[] = [];
   const filters: string[] = [];

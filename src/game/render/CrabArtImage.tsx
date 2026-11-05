@@ -26,7 +26,6 @@ import { CLASS_HOME_FACTION } from "../animation/sheetResolver";
 
 export interface ClassArtImageProps {
   classId: ClassId;
-  isRookie?: boolean;
   size?: number;
   className?: string;
   /**
@@ -40,11 +39,11 @@ export interface ClassArtImageProps {
 }
 
 export function ClassArtImage(props: ClassArtImageProps): React.ReactNode {
-  const { classId, isRookie, size = 96, className, faction } = props;
+  const { classId, size = 96, className, faction } = props;
   return (
     <div
       className={className}
-      data-art-class={artKeyForClass(classId, isRookie)}
+      data-art-class={artKeyForClass(classId)}
       style={{
         width: size,
         height: size,
@@ -56,7 +55,6 @@ export function ClassArtImage(props: ClassArtImageProps): React.ReactNode {
       <CrabSheetSprite
         classId={classId}
         faction={faction ?? CLASS_HOME_FACTION[classId]}
-        isRookie={isRookie}
         size={size}
         state="idle"
       />
@@ -79,7 +77,6 @@ export default function CrabArtImage({
     <ClassArtImage
       classId={crab.classId}
       faction={crab.faction}
-      isRookie={crab.isRookie}
       size={size}
       className={className}
     />

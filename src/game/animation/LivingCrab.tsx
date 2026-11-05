@@ -1,9 +1,9 @@
 // Crabtopia — LivingCrab
 // Single entry point for rendering a crab with the overhaul animation
 // system. Every crab now resolves to a real frame-animated sprite sheet
-// (see sheetResolver): dedicated sheets for gildclaw / warden / reaver /
-// pincher, nearest-sheet + faction hue tint for bulwark / skitter /
-// tidecaller / shellmender, kelp-tinted pincher sheet for rookies. The
+// (see sheetResolver): every class has its own dedicated sheet, plus a
+// faction hue tint. Rookie is a rank label only — it never changes a
+// crab's sheet or artwork. The
 // puppet rig (PuppetCrab) remains available as a standalone articulated
 // layer, but no screen needs it as a fallback anymore — there is no static
 // or procedural-blob rendering path left for crabs.
@@ -39,7 +39,6 @@ export default function LivingCrab({
     <CrabSheetSprite
       classId={crab.classId}
       faction={crab.faction}
-      isRookie={crab.isRookie}
       state={state}
       size={size}
       speed={speed}

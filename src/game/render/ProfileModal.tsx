@@ -1110,7 +1110,6 @@ function ShowcaseView({
                   <ClassArtImage
                     classId={c.classId}
                     faction={c.faction}
-                    isRookie={c.isRookie}
                     size={40}
                     speed={0}
                   />

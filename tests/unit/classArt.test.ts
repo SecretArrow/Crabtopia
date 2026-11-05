@@ -12,6 +12,7 @@ import {
   LEGENDARY_ART,
   ROOKIE_ART,
   artForClass,
+  artKeyForClass,
 } from "../../src/game/data/classArt";
 import { CLASS_LIST } from "../../src/game/content/classes";
 
@@ -51,10 +52,14 @@ describe("classArt — every class owns its preview art", () => {
     }
   });
 
-  it("rookies resolve to the rookie art, classes to their own", () => {
+  it("the class decides the art — rookie rank is not an input", () => {
+    // A crab's visual identity is ALWAYS its class. The old rookie →
+    // ROOKIE_ART override is gone: the helpers take no rookie flag, so
+    // a rookie Bulwark previews as a Bulwark, a rookie Reaver as a
+    // Reaver, and so on — on every surface that uses this mapping.
     for (const cls of CLASS_LIST) {
       expect(artForClass(cls.id)).toBe(CLASS_ART[cls.id]);
-      expect(artForClass(cls.id, true)).toBe(ROOKIE_ART);
+      expect(artKeyForClass(cls.id)).toBe(cls.id);
     }
   });
 });

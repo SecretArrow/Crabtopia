@@ -21,18 +21,26 @@ export const CLASS_ART: Record<ClassId, string> = {
   gildclaw: "/art/crabs/gildclaw-cinder.png",
 };
 
-/** Rookie crabs have their own portrait (not a class portrait). */
+/**
+ * The kelp-green rookie portrait file. Retained as a generic placeholder
+ * asset (genesis filename list, unknown-class fallback in render/ui) —
+ * it is NOT a crab visual identity: a crab always renders with its own
+ * class's art, rookie or not.
+ */
 export const ROOKIE_ART = "/art/crabs/rookie-kelp.png";
 
 /** The shadow/legendary portrait from the reference sheet. */
 export const LEGENDARY_ART = "/art/crabs/legendary-glow.png";
 
-/** Preview art path for a class identity (rookies get the rookie art). */
-export function artForClass(classId: ClassId, isRookie?: boolean): string {
-  return isRookie ? ROOKIE_ART : CLASS_ART[classId];
+/**
+ * Preview art path for a class identity. The class decides — always:
+ * a crab's rookie rank is a label, never an artwork override.
+ */
+export function artForClass(classId: ClassId): string {
+  return CLASS_ART[classId];
 }
 
-/** Stable key for data attributes / tests ("rookie" or the class id). */
-export function artKeyForClass(classId: ClassId, isRookie?: boolean): string {
-  return isRookie ? "rookie" : classId;
+/** Stable key for data attributes / tests (always the class id). */
+export function artKeyForClass(classId: ClassId): string {
+  return classId;
 }

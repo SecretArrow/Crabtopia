@@ -1,5 +1,5 @@
 // Unit tests for sheetResolver (visual overhaul): EVERY class × faction
-// combination — and rookies — must resolve to a real sprite sheet, so no
+// combination must resolve to a real sprite sheet, so no
 // screen can fall back to the retired procedural SVG blob or a static PNG.
 import { describe, it, expect } from "vitest";
 import {
@@ -77,15 +77,19 @@ describe("sheetResolver", () => {
     expect(d.hueRotate).not.toBe(0);
   });
 
-  it("rookies always resolve to the kelp-tinted pincher sheet", () => {
+  it("identity is class-only: every class resolves to its own sheet at every faction", () => {
+    // Rookie rank is not a resolver input at all — the old rookie →
+    // kelp-tinted pincher override is gone, so there is no path by
+    // which a crab borrows another class's sheet. Pincher sheet is
+    // returned for the pincher class only, and every other class
+    // always gets its own dedicated sheet (rookie starters included).
     for (const cls of CLASS_LIST) {
-      const d = resolveSheetDescriptor({
-        classId: cls.id,
-        faction: "coral_court",
-        isRookie: true,
-      });
-      expect(d.key).toBe("pincher");
-      expect(d.hueRotate).not.toBe(0);
+      for (const faction of FACTION_LIST) {
+        expect(
+          resolveSheetForCrab({ classId: cls.id, faction: faction.id }),
+          `${cls.id}/${faction.id}`,
+        ).toBe(cls.id);
+      }
     }
   });
 
