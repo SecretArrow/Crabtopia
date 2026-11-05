@@ -28,7 +28,7 @@ import {
   SectionTitle,
   StatChip,
 } from "../ui";
-import { Modal } from "./MapScreen";
+import { Modal } from "../Modal";
 
 export default function TeamsScreen() {
   const player = useGame((s) => s.player)!;

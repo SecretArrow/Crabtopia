@@ -30,7 +30,7 @@ import CrabRenderer from "../CrabRenderer";
 import { ClassArtImage } from "../CrabArtImage";
 import ElementBadge from "../ElementBadge";
 import { resolveElement } from "../../engine/elements";
-import { Modal } from "./MapScreen";
+import { Modal } from "../Modal";
 import { getGeneVariant, BODY_PART_SLOTS, RARITY_ORDER } from "../../content/bodyparts";
 import type { FactionId, ClassId, Crab, BazaarListing, Egg, Rarity } from "../../types";
 

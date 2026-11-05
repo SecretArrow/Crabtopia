@@ -19,7 +19,7 @@ import {
 } from "../ui";
 import { CONFIG } from "../../engine/config";
 import CrabRenderer from "../CrabRenderer";
-import { Modal } from "./MapScreen";
+import { Modal } from "../Modal";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,

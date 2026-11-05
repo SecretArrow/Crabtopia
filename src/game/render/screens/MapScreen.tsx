@@ -652,6 +652,3 @@ function DeployModal({ siteId, onClose }: { siteId: string; onClose: () => void 
     </Modal>
   );
 }
-
-// Re-export Modal from the shared component for backward compatibility with existing imports.
-export { Modal } from "../Modal";
