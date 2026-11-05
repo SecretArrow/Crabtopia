@@ -91,25 +91,26 @@ test.describe("Sprite animation system", () => {
       await page.waitForTimeout(300);
     }
     await page.locator("main button:has-text('Deploy')").first().click({ force: true });
-    await page.waitForTimeout(6500);
 
-    // Battle screen reached.
-    await expect(page.getByTestId("battle-timer")).toBeVisible({ timeout: 10000 });
-
-    // New-system sprites are on the field (sheet-animated and/or rig).
+    // Sample animation states from the moment the battle mounts — do
+    // NOT sleep first. The battle is a real-time auto battler: units
+    // MOVE on their own, so locomotion states (walk / run) must appear
+    // — movement speed drives the animation state, there is no
+    // static-image sliding. But the opening march is SHORT: the front
+    // columns spawn 16% apart and close to the 9.5% contact stop in
+    // well under a second at 9.5–17 %/s move speeds, and even
+    // back-column units finish their crossing in ~2–4 s. The old flow
+    // slept 6.5 s after Deploy (on top of the ~3.25 s loading
+    // cinematic) before the first sample, so the march was over
+    // before polling began — the old pass leaned on a steering
+    // deadlock that kept a blocked unit reporting walk in place.
+    // Polling therefore starts with the click; the locator is scoped
+    // to the battle arena, which only exists once the battle mounts,
+    // so deployment/loading sprites never pollute the sample.
     const sprites = page.locator(
-      '[data-testid="animated-crab"], [data-testid="puppet-crab"]',
+      '[data-testid="battle-arena"] [data-testid="animated-crab"], ' +
+        '[data-testid="battle-arena"] [data-testid="puppet-crab"]',
     );
-    await expect(sprites.first()).toBeVisible({ timeout: 10000 });
-    expect(await sprites.count()).toBeGreaterThanOrEqual(5);
-
-    // Particle canvas mounted in the arena.
-    await expect(page.locator('[data-testid="particle-layer"]')).toBeAttached();
-
-    // The battle is a real-time auto battler: units MOVE on their own,
-    // so locomotion states (walk / run) must appear — movement speed
-    // drives the animation state, there is no static-image sliding —
-    // and action states (attack / skill / hit / death…) follow.
     const seenStates = new Set<string>();
     await expect
       .poll(
@@ -123,6 +124,18 @@ test.describe("Sprite animation system", () => {
         { timeout: 30000, intervals: [300] },
       )
       .toBe(true);
+
+    // Battle screen reached (the poll above can only succeed once the
+    // arena mounted, but assert the spectator surface explicitly).
+    await expect(page.getByTestId("battle-timer")).toBeVisible({ timeout: 10000 });
+
+    // New-system sprites are on the field (sheet-animated and/or rig).
+    await expect(sprites.first()).toBeVisible({ timeout: 10000 });
+    expect(await sprites.count()).toBeGreaterThanOrEqual(5);
+
+    // Particle canvas mounted in the arena.
+    await expect(page.locator('[data-testid="particle-layer"]')).toBeAttached();
+
     expect(
       [...seenStates].some((s) => s !== "idle"),
     ).toBe(true);
