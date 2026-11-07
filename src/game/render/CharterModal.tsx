@@ -399,7 +399,7 @@ export default function CharterModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3"
       style={{ background: "rgba(4,12,28,0.72)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
@@ -1248,7 +1248,7 @@ function ConfirmDialog({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-center p-4"
       style={{ background: "rgba(4,12,28,0.78)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >

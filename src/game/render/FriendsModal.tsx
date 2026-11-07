@@ -728,7 +728,7 @@ function ConfirmDialog({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-center p-4"
       style={{ background: "rgba(2,12,28,0.7)", backdropFilter: "blur(4px)" }}
       onClick={onCancel}
       role="alertdialog"
@@ -918,7 +918,7 @@ export default function FriendsModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       style={{ background: "rgba(2,12,28,0.78)", backdropFilter: "blur(8px)" }}
       onClick={onClose}
       role="dialog"
@@ -1086,7 +1086,6 @@ export default function FriendsModal({ onClose }: { onClose: () => void }) {
                                   classId={show[0].classId}
                                   faction={f.faction}
                                   size={22}
-                                  speed={0}
                                 />
                               </span>
                               <span

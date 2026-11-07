@@ -609,7 +609,7 @@ export default function ReefPlotsModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       style={{ background: "rgba(2,12,28,0.78)", backdropFilter: "blur(8px)" }}
       onClick={onClose}
       role="dialog"
@@ -1123,7 +1123,7 @@ function PlotDetailDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-[160] flex items-center justify-center p-3"
+      className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-center p-3"
       style={{ background: "rgba(2,12,28,0.6)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
@@ -1272,7 +1272,7 @@ function ManageOverlay({
   const f = FACTIONS[plot.biome];
   return (
     <div
-      className="fixed inset-0 z-[160] flex items-center justify-center p-3"
+      className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-center p-3"
       style={{ background: "rgba(2,12,28,0.7)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
@@ -1371,7 +1371,7 @@ function PriceFormOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[170] flex items-center justify-center p-3"
+      className="modal-backdrop-enter fixed inset-0 z-[170] flex items-center justify-center p-3"
       style={{ background: "rgba(2,12,28,0.7)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >

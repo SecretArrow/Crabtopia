@@ -768,7 +768,7 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 md:p-6"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 md:p-6"
       style={{
         background: "rgba(4, 6, 18, 0.82)",
         backdropFilter: "blur(10px)",

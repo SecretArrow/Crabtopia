@@ -746,7 +746,7 @@ export function DefenseHubModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 md:p-6 bg-black/70 backdrop-blur-md"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 md:p-6 bg-black/70 backdrop-blur-md"
       onClick={onClose}
       role="dialog"
       aria-modal="true"

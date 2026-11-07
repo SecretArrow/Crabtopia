@@ -313,7 +313,7 @@ export default function WeeklyLotteryModal({ onClose }: { onClose: () => void })
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       style={{
         background:
           "radial-gradient(circle at 50% 0%, rgba(255,209,102,0.12) 0%, rgba(6,18,43,0.86) 45%, rgba(6,18,43,0.94) 100%)",

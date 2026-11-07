@@ -417,7 +417,7 @@ export function AdminConsoleModal({ onClose }: { onClose: () => void }) {
   if (!authenticated) {
     return (
       <div
-        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+        className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-4"
         style={{ background: "rgba(2,8,20,0.85)", backdropFilter: "blur(10px)" }}
         onClick={onClose}
       >
@@ -502,7 +502,7 @@ export function AdminConsoleModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
       style={{ background: "rgba(2,8,20,0.85)", backdropFilter: "blur(10px)" }}
       onClick={onClose}
     >
@@ -1175,7 +1175,7 @@ function PlayerDetailDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-[160] flex items-center justify-end"
+      className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-end"
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={onClose}
     >

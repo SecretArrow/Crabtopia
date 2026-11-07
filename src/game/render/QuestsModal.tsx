@@ -198,7 +198,7 @@ export function QuestsModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       style={{ background: "rgba(4,12,32,0.78)", backdropFilter: "blur(10px)" }}
       onClick={onClose}
     >

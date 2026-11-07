@@ -534,7 +534,7 @@ export default function EconomyHealthModal({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       style={{
         background: "rgba(2,12,28,0.78)",
         backdropFilter: "blur(8px)",

@@ -577,7 +577,7 @@ function CrabRow({ c }: { c: RankedCrab }) {
         className="w-11 h-11 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
         style={{ background: `${f.colors.dark}aa`, border: `1px solid ${f.colors.primary}55` }}
       >
-        <ClassArtImage classId={c.classId} faction={c.faction} size={40} speed={0} />
+        <ClassArtImage classId={c.classId} faction={c.faction} size={40} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1 min-w-0">
@@ -876,7 +876,7 @@ export default function LeaderboardModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
       style={{ background: "rgba(4,16,32,0.78)", backdropFilter: "blur(8px)" }}
       role="dialog"
       aria-modal="true"

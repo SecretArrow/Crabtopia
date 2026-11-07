@@ -349,7 +349,7 @@ export default function TideborneBoutiqueModal({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="boutique-title"
@@ -687,7 +687,7 @@ export default function TideborneBoutiqueModal({
       {/* ===== Spending limit modal ===== */}
       {showSpendingLimitModal && pendingPurchase && (
         <div
-          className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+          className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-center p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="spend-limit-title"
@@ -762,7 +762,7 @@ export default function TideborneBoutiqueModal({
       {/* ===== Parental consent notice ===== */}
       {showParentalConsent && (
         <div
-          className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+          className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="parental-title"

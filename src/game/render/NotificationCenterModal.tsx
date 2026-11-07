@@ -287,7 +287,7 @@ export default function NotificationCenterModal({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-6"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-6"
       style={{ background: "rgba(5,10,30,0.65)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
