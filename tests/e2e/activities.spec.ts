@@ -8,7 +8,7 @@
 // the resulting state change.
 
 import { test, expect } from "@playwright/test";
-import { completeOnboarding } from "./helpers";
+import { completeOnboarding, skipTutorial } from "./helpers";
 
 test.describe("Activities", () => {
   test("mining produces materials and triggers cooldown", async ({ page }) => {
@@ -25,10 +25,122 @@ test.describe("Activities", () => {
     await expect(mineBtn).toBeVisible({ timeout: 5000 });
     await mineBtn.click({ force: true });
 
-    // Mining animation overlay runs ~1.5s; after it resolves the node is on
-    // cooldown and its button label flips to "Cooling..." (with cooldown
-    // countdown). Wait up to 5s for that text to appear.
+    // The click spends energy and starts the node cooldown up front
+    // (the button label flips to "Cooling..." with a countdown) — the
+    // watched dig that opens over it is presentation of the same run.
     await expect(page.locator("text=/Cooling|Cooldown/i").first()).toBeVisible({ timeout: 6000 });
+  });
+
+  test("mining plays out the dig and claims the haul from the finale", async ({ page }) => {
+    await completeOnboarding(page);
+    await page.locator("nav button:has-text('Mining')").first().click({ force: true });
+    await page.waitForTimeout(1500);
+    await expect(page.locator("text=/Crystal Mines/i").first()).toBeVisible({ timeout: 5000 });
+
+    const mineBtn = page.locator("main button:has-text('Mine')").first();
+    await mineBtn.click({ force: true });
+
+    // The watched dig opens with the team's five real sprites digging.
+    const scene = page.getByTestId("mining-scene");
+    await expect(scene).toBeVisible({ timeout: 5000 });
+    await expect(scene.getByTestId("animated-crab")).toHaveCount(5, { timeout: 5000 });
+
+    // Skip the dig → the finale's claim action appears → claim.
+    await scene.locator("button:has-text('Skip')").first().click({ force: true });
+    const action = page.getByTestId("loot-reveal-action");
+    await expect(action).toContainText(/Claim Loot/, { timeout: 8000 });
+    await action.locator("button").click({ force: true });
+
+    // The haul is granted through the normal path: the Mined toast
+    // fires, the scene closes, and a material chip lands in the
+    // inventory peek.
+    await expect(page.locator("text=/Mined Kelp Ridge/i").first()).toBeVisible({ timeout: 5000 });
+    await expect(scene).toBeHidden({ timeout: 5000 });
+    await expect(page.locator("text=/×[1-9]/").first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test("closing the dig scene claims nothing; the loot waits and can be claimed", async ({ page }) => {
+    await completeOnboarding(page);
+    await page.locator("nav button:has-text('Mining')").first().click({ force: true });
+    await page.waitForTimeout(1500);
+    await page.locator("main button:has-text('Mine')").first().click({ force: true });
+
+    const scene = page.getByTestId("mining-scene");
+    await expect(scene).toBeVisible({ timeout: 5000 });
+    // Close mid-dig — no claim happens.
+    await scene.locator("button[aria-label='Close without claiming']").click({ force: true });
+    await expect(scene).toBeHidden({ timeout: 5000 });
+    await expect(page.locator("text=/Mined Kelp Ridge/i")).toHaveCount(0);
+
+    // The pending-loot banner offers Watch + Claim; claiming from the
+    // banner grants the haul (toast fires exactly once).
+    await expect(page.locator("text=/loot waiting/i").first()).toBeVisible({ timeout: 5000 });
+    await page.locator("button:has-text('Claim Loot')").first().click({ force: true });
+    await expect(page.locator("text=/Mined Kelp Ridge/i").first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("text=/loot waiting/i")).toHaveCount(0);
+  });
+
+  test("watch the dig on a completed dive, then claim from the finale", async ({ page }) => {
+    await completeOnboarding(page);
+    // Force the first free world site into a completed player dive in
+    // the persisted save, then reload so the store rehydrates with it.
+    await page.evaluate(() => {
+      const raw = localStorage.getItem("crabtopia-save");
+      if (!raw) throw new Error("persisted save not found");
+      const data = JSON.parse(raw);
+      const st = data.state;
+      const teamId = st.player.teams[0].id;
+      const site =
+        st.worldSites.find((s: { occupiedBy?: string }) => !s.occupiedBy) ??
+        st.worldSites[0];
+      Object.assign(site, {
+        occupiedBy: teamId,
+        occupierName: st.player.name,
+        teamId,
+        ownerIsPlayer: true,
+        state: "completed",
+        baseReward: 500,
+        rewardRemaining: 500,
+        deployTime: Date.now() - 10 * 60 * 1000,
+        raidCount: 0,
+      });
+      localStorage.setItem("crabtopia-save", JSON.stringify(data));
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1500);
+    await skipTutorial(page);
+
+    await page.locator("nav button:has-text('Dive Map')").first().click({ force: true });
+    await page.waitForTimeout(1000);
+    const watchBtn = page.locator("button:has-text('Watch the Dig')").first();
+    await expect(watchBtn).toBeVisible({ timeout: 5000 });
+    await watchBtn.click({ force: true });
+
+    const scene = page.getByTestId("mining-scene");
+    await expect(scene).toBeVisible({ timeout: 5000 });
+    await expect(scene.getByTestId("animated-crab")).toHaveCount(5, { timeout: 5000 });
+    await scene.locator("button:has-text('Skip')").first().click({ force: true });
+
+    const action = page.getByTestId("loot-reveal-action");
+    await expect(action).toContainText(/Claim/, { timeout: 8000 });
+    await action.locator("button").click({ force: true });
+
+    // Watched ≡ direct claim: 500 gross at the 0% tithe bracket of a
+    // fresh 2,000-gold balance lands as exactly +500, and the scene
+    // closes because the site is now claimed.
+    await expect(scene).toBeHidden({ timeout: 5000 });
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const data = JSON.parse(
+              localStorage.getItem("crabtopia-save") ?? "{}"
+            );
+            return data.state?.player?.gold;
+          }),
+        { timeout: 5000 }
+      )
+      .toBe(2500);
   });
 
   test("exploration shows 5x5 grid and Reset Map button", async ({ page }) => {
