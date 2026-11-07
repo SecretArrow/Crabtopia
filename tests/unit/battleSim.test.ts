@@ -431,6 +431,67 @@ describe("battleSim — dazed (post-freeze common sense)", () => {
   });
 });
 
+describe("battleSim — support follows its frontline", () => {
+  it("with its frontline deep in the enemy half, the support crosses midfield but stays behind the front", () => {
+    const mender = mk("shellmender", 81, 10);
+    const front = mk("bulwark", 82, 10, { hp: 100000, attack: 1 });
+    const foe = mk("reaver", 83, 10, { hp: 100000, attack: 1 });
+    const sim = simOf([mender, front], [foe], 23, {
+      [mender.id]: { x: 15, y: 50 },
+      [front.id]: { x: 74, y: 50 },
+      [foe.id]: { x: 84, y: 50 },
+    });
+    const m = unit(sim, mender.id);
+    const f = unit(sim, front.id);
+    let maxX = -Infinity;
+    let crossedAt: { support: number; front: number } | null = null;
+    for (let t = 0; t < 20000; t += 50) {
+      stepSim(sim, 50);
+      maxX = Math.max(maxX, m.x);
+      if (!crossedAt && m.x > 50) crossedAt = { support: m.x, front: f.x };
+    }
+    // It followed the push across the centre line (old behaviour
+    // stranded it around x≈25, a full cast range short of its aim).
+    expect(maxX).toBeGreaterThan(50);
+    expect(crossedAt).not.toBeNull();
+    // …but at the crossing moment it was still behind its frontline
+    // ally (cap: frontline − 6, small tolerance for separation drift).
+    expect(crossedAt!.support).toBeLessThanOrEqual(crossedAt!.front - 6 + 3);
+    // And it actually participates from there: it lands basic strikes
+    // on the enemy instead of spectating.
+    expect(
+      sim.events.some(
+        (e) => e.type === "strike" && e.actorId === mender.id,
+      ),
+    ).toBe(true);
+  });
+
+  it("a lone support still never crosses midfield on its own", () => {
+    const mender = mk("shellmender", 91, 10, { hp: 100000 });
+    const foe = mk("reaver", 92, 10, { hp: 100000, attack: 1 });
+    const sim = simOf([mender], [foe], 29, {
+      [mender.id]: { x: 15, y: 50 },
+      [foe.id]: { x: 80, y: 50 },
+    });
+    const m = unit(sim, mender.id);
+    let maxX = -Infinity;
+    for (let t = 0; t < 20000; t += 50) {
+      stepSim(sim, 50);
+      maxX = Math.max(maxX, m.x);
+    }
+    expect(maxX).toBeLessThanOrEqual(54);
+    // It still advances toward the fight and engages from its own
+    // half (the enemy meets it partway, so it settles well short of
+    // the line — the point is that it never crosses it).
+    expect(maxX).toBeGreaterThan(25);
+    expect(
+      sim.events.some(
+        (e) => e.type === "strike" && e.actorId === mender.id,
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("battleSim — timeout", () => {
   it("two unkillable tanks end at the 180s cap with an HP-ratio winner", () => {
     const a = mk("bulwark", 41, 10, { hp: 100000, attack: 1 });

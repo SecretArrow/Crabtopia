@@ -56,8 +56,10 @@ export const MELEE_REACH = 10.5;
 export const RANGED_BAND = { min: 25, max: 35 } as const;
 /** Caster (Tidecaller) engagement band, field %. */
 export const CASTER_BAND = { min: 23, max: 33 } as const;
-/** Support damage casts reach at most this far (and never cross midfield). */
+/** Support damage casts reach at most this far. */
 export const SUPPORT_CAST_RANGE = 30;
+/** How far behind its side's frontmost living ally a support may stop. */
+export const SUPPORT_FRONTLINE_GAP = 6;
 /** Heal / shield delivery range. */
 export const ALLY_CAST_RANGE = 24;
 
@@ -1240,21 +1242,43 @@ function moveUnit(sim: SimState, unit: SimUnit, dtMs: number): void {
             stopDist = 0;
           }
         } else {
-          // Support: close to cast range but stay on its own half —
-          // the goal is clamped at the centre line.
+          // Support: close to cast range of the target, but never
+          // advance past its own frontline (common-sense positioning):
+          // its STOP position is capped 6 field-% behind the side's
+          // frontmost living ally, so the support follows a deep push
+          // instead of spectating from midfield. With no ally ahead of
+          // it the cap falls back to the centre line — a lone support
+          // still never crosses midfield on its own.
           if (dist > SUPPORT_CAST_RANGE - 2) {
-            goal = {
-              x:
-                unit.c.side === "player"
-                  ? Math.min(ref.x, 53)
-                  : Math.max(ref.x, 47),
-              y: ref.y,
-            };
+            const playerSide = unit.c.side === "player";
+            let front: SimUnit | null = null;
+            for (const u of sim.units) {
+              if (u === unit || u.c.side !== unit.c.side || u.c.isDefeated) {
+                continue;
+              }
+              if (!front || (playerSide ? u.x > front.x : u.x < front.x)) {
+                front = u;
+              }
+            }
+            let limit = playerSide ? 53 : 47;
+            if (front && (playerSide ? front.x > unit.x : front.x < unit.x)) {
+              limit = playerSide
+                ? front.x - SUPPORT_FRONTLINE_GAP
+                : front.x + SUPPORT_FRONTLINE_GAP;
+            }
+            // stopDist is measured from the AIM point, so aim one
+            // cast-range beyond the limit — the support's stopping
+            // position can then actually reach (never pass) the cap.
+            // Aiming AT the cap would strand it a full cast range
+            // short of deep targets (out of cast range, the old
+            // passivity this replaces). The support advances to its
+            // cap even while the target is still beyond cast range:
+            // closing on the frontline is the point.
+            const aimX = playerSide
+              ? Math.min(ref.x, limit + (SUPPORT_CAST_RANGE - 2))
+              : Math.max(ref.x, limit - (SUPPORT_CAST_RANGE - 2));
+            goal = { x: aimX, y: ref.y };
             stopDist = SUPPORT_CAST_RANGE - 2;
-            // If even the midfield-clamped goal can't reach cast range,
-            // the support holds position instead of pressing the line.
-            const clampedDist = Math.hypot(goal.x - ref.x, goal.y - ref.y);
-            if (clampedDist > SUPPORT_CAST_RANGE) goal = null;
           }
         }
       }
