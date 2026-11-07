@@ -2,12 +2,19 @@
 // Mining's own state (energy, node cooldowns) lives in localStorage via
 // useLocalStorage; materials land in the player profile (gainMaterials)
 // and each run charges the team's stamina via the store. Fully playable —
-// every Mine click yields real materials, consumes energy, and starts a
+// every Mine click rolls real materials, consumes energy, and starts a
 // node cooldown.
+//
+// The haul is granted through the watched dig: a Mine click stores the
+// rolled yields as a PendingDig and opens the MiningScene, where the
+// team's own crabs dig the node face while the predetermined loot pops
+// out. The scene's Claim (or the "loot waiting" banner's Claim) grants
+// the yields exactly once via gainMaterials — closing the scene claims
+// nothing, and the pending dig persists until claimed.
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useGame } from "../../store/gameStore";
 import {
   GlowButton,
@@ -35,6 +42,8 @@ import { mulberry32 } from "../../engine/rng";
 import { STAMINA_COSTS } from "../../engine/config";
 import TeamSelect from "../TeamSelect";
 import CrabRenderer from "../CrabRenderer";
+import MiningScene, { MINING_NODE_THEMES } from "../MiningScene";
+import type { LootRevealItem } from "../LootReveal";
 import { firstAvailableTeam } from "../../engine/teamEligibility";
 import {
   expeditionStats,
@@ -47,14 +56,6 @@ function dropPreview(node: MiningNodeDef): string {
   return node.drops
     .map((d) => `${MATERIALS[d.materialId].icon} ${MATERIALS[d.materialId].name}`)
     .join("  ");
-}
-
-interface FloatingGain {
-  id: number;
-  materialId: MaterialId;
-  amount: number;
-  x: number;
-  y: number;
 }
 
 export default function MiningScreen() {
@@ -144,13 +145,40 @@ export default function MiningScreen() {
     }
   }, [now]);
 
-  // Mining animation state.
-  const [activeNode, setActiveNode] = useState<MiningNodeDef | null>(null);
-  const [gains, setGains] = useState<FloatingGain[]>([]);
-  const [lastYields, setLastYields] = useState<
-    Partial<Record<MaterialId, number>> | null
-  >(null);
-  const gainIdRef = useState({ v: 0 })[0];
+  // Watched-dig state: the scene is open over the screen. The loot
+  // itself lives in mining.pendingDig (persisted), NOT here — closing
+  // the scene or leaving the screen can never lose it.
+  const [watching, setWatching] = useState(false);
+  const pendingDig = mining.pendingDig ?? null;
+  const pendingNode = useMemo(
+    () =>
+      pendingDig
+        ? MINING_NODES.find((n) => n.id === pendingDig.nodeId) ?? null
+        : null,
+    [pendingDig]
+  );
+  const pendingCrabs = useMemo(() => {
+    if (!pendingDig) return teamCrabs;
+    const resolved = pendingDig.crabIds
+      .map((id) => crabsById.get(id))
+      .filter(Boolean) as typeof crabs;
+    return resolved.length > 0 ? resolved : teamCrabs;
+  }, [pendingDig, crabsById, teamCrabs]);
+  const pendingLoot = useMemo<LootRevealItem[]>(
+    () =>
+      pendingDig
+        ? (Object.entries(pendingDig.yields) as [MaterialId, number][]).map(
+            ([mid, amt]) => ({
+              key: mid,
+              name: MATERIALS[mid].name,
+              amount: amt,
+              icon: <span>{MATERIALS[mid].icon}</span>,
+              tierValue: MATERIALS[mid].baseValue,
+            })
+          )
+        : [],
+    [pendingDig]
+  );
 
   const energyPct = mining.energy / MAX_MINING_ENERGY;
   const msToNextEnergy = useMemo(() => {
@@ -160,6 +188,14 @@ export default function MiningScreen() {
   }, [now, mining.lastRegenAt, mining.energy]);
 
   function handleMine(node: MiningNodeDef) {
+    if (pendingDig) {
+      pushToast({
+        title: "Your last dig's loot is still waiting!",
+        description: "Claim it (or watch the dig) before starting another.",
+        variant: "warning",
+      });
+      return;
+    }
     if (!selectedTeam || teamCrabs.length === 0) {
       pushToast({
         title: "No available mining team!",
@@ -203,15 +239,6 @@ export default function MiningScreen() {
     const rng = mulberry32(Date.now() ^ (node.id.length * 2654435761));
     const yields = applyMiningBonus(rollNodeDrops(node, rng), yieldBonus);
 
-    setMining((prev) => ({
-      ...prev,
-      energy: prev.energy - node.energyCost,
-      nodeCooldowns: {
-        ...prev.nodeCooldowns,
-        [node.id]: Date.now() + node.cooldownMs,
-      },
-    }));
-
     // If yields is empty (all rolls failed), give a consolation kelp_fiber so the
     // player never gets literally nothing.
     const finalYields =
@@ -219,45 +246,48 @@ export default function MiningScreen() {
         ? { kelp_fiber: 1 } as Partial<Record<MaterialId, number>>
         : yields;
 
-    gainMaterials(finalYields);
+    // The haul is NOT granted yet: it becomes a pending dig and the
+    // MiningScene plays it out. Claiming (scene finale or banner)
+    // grants it exactly once — see claimPendingDig.
+    setMining((prev) => ({
+      ...prev,
+      energy: prev.energy - node.energyCost,
+      nodeCooldowns: {
+        ...prev.nodeCooldowns,
+        [node.id]: Date.now() + node.cooldownMs,
+      },
+      pendingDig: {
+        nodeId: node.id,
+        yields: finalYields,
+        crabIds: teamCrabs.map((c) => c.id),
+        bonusPct: yieldBonus,
+      },
+    }));
+    setWatching(true);
+  }
 
-    // Kick off the animation overlay.
-    setActiveNode(node);
-    setLastYields(finalYields);
-
-    // Spawn floating gain particles after the pickaxe swing (1.0s in).
-    setTimeout(() => {
-      const entries = Object.entries(finalYields) as [MaterialId, number][];
-      const next: FloatingGain[] = entries.map(([mid, amt], i) => ({
-        id: ++gainIdRef.v,
-        materialId: mid,
-        amount: amt,
-        x: 50 + (i - (entries.length - 1) / 2) * 18,
-        y: 50,
-      }));
-      setGains(next);
-    }, 1000);
-
-    // End the animation overlay (1.5s) and confirm.
-    setTimeout(() => {
-      const summary = (Object.entries(finalYields) as [MaterialId, number][])
-        .map(
-          ([mid, amt]) =>
-            `${MATERIALS[mid].icon} ${amt} ${MATERIALS[mid].name}`
-        )
-        .join(", ");
-      pushToast({
-        title: `Mined ${node.name}!`,
-        description:
-          yieldBonus > 0
-            ? `Found ${summary}. Team bonus +${Math.round(yieldBonus * 100)}%`
-            : `Found ${summary}.`,
-        variant: "success",
-      });
-      setActiveNode(null);
-      setGains([]);
-      setLastYields(null);
-    }, 1500);
+  // Grant the pending dig's predetermined yields — the one and only
+  // grant path for a dig, identical from the scene finale and the
+  // "loot waiting" banner. Clears the pending dig first, so no second
+  // claim can ever pay out again.
+  function claimPendingDig() {
+    const pd = mining.pendingDig;
+    if (!pd) return;
+    const node = MINING_NODES.find((n) => n.id === pd.nodeId);
+    setMining((prev) => ({ ...prev, pendingDig: null }));
+    gainMaterials(pd.yields);
+    const summary = (Object.entries(pd.yields) as [MaterialId, number][])
+      .map(([mid, amt]) => `${MATERIALS[mid].icon} ${amt} ${MATERIALS[mid].name}`)
+      .join(", ");
+    pushToast({
+      title: `Mined ${node?.name ?? "the dig"}!`,
+      description:
+        pd.bonusPct > 0
+          ? `Found ${summary}. Team bonus +${Math.round(pd.bonusPct * 100)}%`
+          : `Found ${summary}.`,
+      variant: "success",
+    });
+    setWatching(false);
   }
 
   return (
@@ -376,7 +406,7 @@ export default function MiningScreen() {
             const disabled =
               onCooldown ||
               noEnergy ||
-              activeNode !== null ||
+              pendingDig !== null ||
               noTeam ||
               powerLocked;
             const cdProgress = onCooldown
@@ -464,7 +494,9 @@ export default function MiningScreen() {
                     disabled={disabled}
                     onClick={() => handleMine(node)}
                     title={
-                      noTeam
+                      pendingDig
+                        ? "Claim your waiting dig loot first"
+                        : noTeam
                         ? "No available team"
                         : powerLocked
                         ? `Need ⚔ ${node.minTeamPower} team power`
@@ -475,7 +507,9 @@ export default function MiningScreen() {
                         : `Mine ${node.name}`
                     }
                   >
-                    {onCooldown
+                    {pendingDig
+                      ? "🎁 Loot Waiting"
+                      : onCooldown
                       ? "Cooling..."
                       : noTeam
                       ? "No Team"
@@ -490,6 +524,53 @@ export default function MiningScreen() {
             );
           })}
         </div>
+
+        {/* Pending dig loot — rolled and paid for, waiting to be claimed */}
+        {pendingDig && pendingNode && !watching && (
+          <GlassPanel
+            className="mt-4 px-3 py-3"
+            style={{ border: "1px solid rgba(255,209,102,0.55)" }}
+          >
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-bold" style={{ color: "#FFD166" }}>
+                🎁 The dig at {pendingNode.name} is done — loot waiting!
+              </div>
+              <div className="flex gap-2">
+                <GlowButton
+                  variant="teal"
+                  size="sm"
+                  onClick={() => setWatching(true)}
+                >
+                  ▶ Watch the Dig
+                </GlowButton>
+                <GlowButton
+                  variant="gold"
+                  size="sm"
+                  onClick={claimPendingDig}
+                >
+                  Claim Loot
+                </GlowButton>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {pendingLoot.map((item) => (
+                <div
+                  key={item.key}
+                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold"
+                  style={{
+                    background: "rgba(10,27,61,0.55)",
+                    border: "1px solid rgba(255,209,102,0.4)",
+                  }}
+                >
+                  {item.icon}
+                  <span>
+                    {item.name} ×{item.amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </GlassPanel>
+        )}
 
         {/* Quick inventory peek */}
         <GlassPanel className="mt-4 px-3 py-3">
@@ -525,138 +606,20 @@ export default function MiningScreen() {
         </GlassPanel>
       </div>
 
-      {/* Mining animation overlay */}
-      <AnimatePresence>
-        {activeNode && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: "rgba(6,18,43,0.78)" }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="relative flex h-64 w-full max-w-md flex-col items-center justify-center">
-              <div className="mb-3 text-6xl">{activeNode.icon}</div>
-
-              {/* Pickaxe swing */}
-              <motion.svg
-                width={120}
-                height={120}
-                viewBox="0 0 120 120"
-                initial={{ rotate: -45, opacity: 0 }}
-                animate={{
-                  rotate: [0, -35, 25, -10, 0],
-                  opacity: [0, 1, 1, 1, 0.85],
-                }}
-                transition={{
-                  duration: 1.0,
-                  times: [0, 0.2, 0.5, 0.75, 1],
-                  ease: "easeInOut",
-                }}
-                style={{ transformOrigin: "60px 60px" }}
-              >
-                {/* handle */}
-                <rect
-                  x={56}
-                  y={20}
-                  width={8}
-                  height={70}
-                  rx={4}
-                  fill="#8B5A2B"
-                  transform="rotate(45 60 60)"
-                />
-                {/* head */}
-                <path
-                  d="M 30 40 Q 60 25 90 40 L 80 52 Q 60 42 40 52 Z"
-                  fill="#C0C0C0"
-                  stroke="#666"
-                  strokeWidth={2}
-                />
-                <circle cx={60} cy={46} r={4} fill="#FFD166" />
-              </motion.svg>
-
-              {/* Spark particles (5 dots flying outward at swing impact ~0.5s) */}
-              <AnimatePresence>
-                {gains.length === 0 && activeNode && (
-                  <>
-                    {[0, 1, 2, 3, 4].map((i) => {
-                      const angle = (i / 5) * Math.PI * 2;
-                      return (
-                        <motion.div
-                          key={`spark-${i}`}
-                          className="absolute rounded-full"
-                          style={{
-                            width: 8,
-                            height: 8,
-                            background: "#FFD166",
-                            boxShadow: "0 0 8px #FFD166",
-                            left: "50%",
-                            top: "55%",
-                          }}
-                          initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
-                          animate={{
-                            x: Math.cos(angle) * 60,
-                            y: Math.sin(angle) * 60,
-                            opacity: [0, 1, 0],
-                            scale: [0, 1.2, 0],
-                          }}
-                          transition={{
-                            duration: 0.6,
-                            delay: 0.45 + i * 0.02,
-                            ease: "easeOut",
-                          }}
-                        />
-                      );
-                    })}
-                  </>
-                )}
-              </AnimatePresence>
-
-              {/* Floating "+N material" text after the swing */}
-              <AnimatePresence>
-                {gains.map((g) => {
-                  const m = MATERIALS[g.materialId];
-                  return (
-                    <motion.div
-                      key={g.id}
-                      className="absolute flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold"
-                      style={{
-                        left: `${g.x}%`,
-                        top: `${g.y}%`,
-                        background: "rgba(10,27,61,0.85)",
-                        border: `1px solid ${rarityColor(m.rarity)}`,
-                        color: rarityColor(m.rarity),
-                      }}
-                      initial={{ y: 0, opacity: 0, scale: 0.6 }}
-                      animate={{ y: -80, opacity: [0, 1, 1, 0], scale: 1 }}
-                      transition={{ duration: 0.9, ease: "easeOut" }}
-                    >
-                      <span>{m.icon}</span>
-                      <span>+{g.amount}</span>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-
-              {/* Summary line once drops are known */}
-              {lastYields && gains.length > 0 && (
-                <motion.div
-                  className="absolute bottom-0 text-center text-xs text-white/70"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.05 }}
-                >
-                  {Object.entries(lastYields).map(
-                    ([mid, amt]) =>
-                      `${MATERIALS[mid as MaterialId].icon} +${amt}`
-                  ).join("  ")}
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Watched dig — the MiningScene plays out the pending haul */}
+      {watching && pendingDig && pendingNode && (
+        <MiningScene
+          title={`Digging ${pendingNode.name}`}
+          subtitle="Your team's haul, exactly as rolled — watch it come out of the rock."
+          crabs={pendingCrabs}
+          theme={MINING_NODE_THEMES[pendingNode.id] ?? MINING_NODE_THEMES.kelp_ridge}
+          loot={pendingLoot}
+          claimLabel="Claim Loot"
+          finaleTitle={`${pendingNode.name} — haul complete!`}
+          onClaim={claimPendingDig}
+          onClose={() => setWatching(false)}
+        />
+      )}
     </div>
   );
 }

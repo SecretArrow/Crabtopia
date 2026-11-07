@@ -62,10 +62,26 @@ export interface InventoryState {
   items: Partial<Record<ItemId, number>>;
 }
 
+/**
+ * A finished dig whose loot has been rolled (and paid for: energy,
+ * cooldown and stamina were spent up front, exactly as before) but not
+ * yet granted. The MiningScene visualizes this predetermined haul;
+ * claiming grants it exactly once via gainMaterials. Persisted with
+ * the rest of the mining state so closing the scene — or leaving the
+ * screen — can never lose the loot.
+ */
+export interface PendingDig {
+  nodeId: string;
+  yields: Partial<Record<MaterialId, number>>;
+  crabIds: string[];
+  bonusPct: number; // team yield bonus fraction at dig time (toast copy)
+}
+
 export interface MiningState {
   energy: number;
   lastRegenAt: number; // ms timestamp of last energy regen tick
   nodeCooldowns: Record<string, number>; // nodeId -> cooldown end ms
+  pendingDig?: PendingDig | null; // additive; older saves simply lack it
 }
 
 export interface ExplorationState {
