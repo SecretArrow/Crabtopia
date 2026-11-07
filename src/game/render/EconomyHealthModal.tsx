@@ -15,13 +15,28 @@
 //  10. Player distribution panel (wealth tiers, simulator note)
 //  11. Footer (docs link, subscribe, close)
 //
-// All data is mock, generated deterministically from a seed so re-renders
-// stay consistent within a timeRange selection.
+// The global panels are an illustrative model, generated deterministically
+// from a seed so re-renders stay consistent within a timeRange selection.
+// The "Your Tide Ledger" panel is NOT model data: it renders this save's
+// real tokenomics counters (engine/economy.ts) and the live config rules.
 
 "use client";
 
 import React, { useMemo, useState } from "react";
 import { useGame } from "../store/gameStore";
+import {
+  CONFIG,
+  MARKET_FEE_TREASURY_POINTS,
+  TIDE_TAX_RATE,
+  TIDE_TAX_WINDOW_MS,
+  TITHE_BRACKETS,
+  TITHE_BURN_SHARE,
+} from "../engine/config";
+import {
+  defaultEconomy,
+  describeTithe,
+  economyOf,
+} from "../engine/economy";
 import {
   GlassPanel,
   GlowButton,
@@ -495,6 +510,17 @@ export default function EconomyHealthModal({
   const player = useGame((s) => s.player);
   const pushToast = useGame((s) => s.pushToast);
 
+  // --- Your Tide Ledger: REAL tokenomics state from this save ---
+  const eco = player ? economyOf(player) : defaultEconomy();
+  const tithe = describeTithe(player?.gold ?? 0);
+  const bracketLine = TITHE_BRACKETS.map(
+    (b, i) =>
+      `${Math.round(b.rate * 100)}% ${i === 0 ? "under" : "from"} ${formatGold(
+        i === 0 ? TITHE_BRACKETS[1].minBalance : b.minBalance
+      )}`
+  ).join(" · ");
+  const tideTaxWindowDays = Math.round(TIDE_TAX_WINDOW_MS / (24 * 60 * 60 * 1000));
+
   const [timeRange, setTimeRange] = useState<TimeRange>("7d");
 
   // All mock data is derived from timeRange so a range switch feels meaningful.
@@ -688,6 +714,94 @@ export default function EconomyHealthModal({
             Inflation target &lt; 3% · Gini target &lt; 0.60 — both within
             bounds.
           </div>
+
+          {/* 2b. YOUR TIDE LEDGER — real counters from this save */}
+          <GlassPanel className="p-4" glow={`${GOLD}22`}>
+            <SectionTitle
+              icon={<span aria-hidden>🧾</span>}
+              title="Your Tide Ledger"
+              action={
+                <span className="text-[10px] text-white/55">
+                  Live from your save — not a model
+                </span>
+              }
+            />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <StatChip
+                label="Tide Treasury"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    <GoldIcon size={12} />
+                    {formatGold(eco.treasury)}
+                  </span>
+                }
+                color={TEAL}
+              />
+              <StatChip
+                label="GOLD burned (your taxes)"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    <GoldIcon size={12} />
+                    {formatGold(eco.totalBurned)}
+                  </span>
+                }
+                color={CORAL}
+              />
+              <StatChip
+                label="Tax you have paid"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    <GoldIcon size={12} />
+                    {formatGold(eco.totalTaxPaid)}
+                  </span>
+                }
+                color={GOLD}
+              />
+              <StatChip
+                label="Prizes paid from Treasury"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    <GoldIcon size={12} />
+                    {formatGold(eco.treasuryOut)}
+                  </span>
+                }
+                color={GREEN}
+              />
+            </div>
+            <div className="mt-3 space-y-1.5 text-[11px] text-white/75">
+              <div>
+                <span className="text-white font-semibold">
+                  Your Tide Tithe rate: {Math.round(tithe.rate * 100)}%
+                </span>{" "}
+                on gold you earn (dives, raids, quests, arena, claims).
+                Brackets: {bracketLine}. Spending is never tithed, and
+                earnings under the first bracket pay nothing.
+              </div>
+              <div>
+                <span className="text-white font-semibold">Tide Tax:</span>{" "}
+                {Math.round(TIDE_TAX_RATE * 100)}% of only the balance
+                above {formatGold(CONFIG.tideTaxThreshold)}, once every{" "}
+                {tideTaxWindowDays} days — your first{" "}
+                {formatGold(CONFIG.tideTaxThreshold)} is never taxed.
+                Window anchored{" "}
+                {new Date(eco.lastTideTaxAt).toLocaleDateString()}.
+              </div>
+              <div>
+                <span className="text-white font-semibold">
+                  Where the tax goes:
+                </span>{" "}
+                {Math.round(TITHE_BURN_SHARE * 100)}% of every tithe is
+                burned forever (a permanent sink that fights inflation);
+                the rest flows into the Tide Treasury, the prize reserve
+                that pays Tidewell Rewards before any new GOLD is minted.
+                Market sales split their{" "}
+                {Math.round(CONFIG.bazaarFeePercent * 10000) / 100}% fee
+                the same way: {Math.round(MARKET_FEE_TREASURY_POINTS * 100)}{" "}
+                point to the Treasury, the rest burned. Escrow, refunds
+                and your own money moving are never taxed.
+              </div>
+            </div>
+          </GlassPanel>
 
           {/* 3. Circulation chart */}
           <GlassPanel className="p-4" glow={`${TEAL}22`}>

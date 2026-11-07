@@ -6,7 +6,14 @@ import { useGame } from "../../store/gameStore";
 import { FACTIONS, FACTION_LIST } from "../../content/factions";
 import { CLASSES, CLASS_LIST } from "../../content/classes";
 import { BREEDS, BREEDS_BY_CLASS, type BreedDef } from "../../content/breeds";
-import { QUESTS } from "../../engine/config";
+import {
+  CONFIG,
+  QUESTS,
+  TEAM_SLOT_COSTS,
+  TIDE_TAX_RATE,
+  TIDE_TAX_WINDOW_MS,
+  TITHE_BRACKETS,
+} from "../../engine/config";
 import {
   BreedDots,
   EmptyState,
@@ -673,7 +680,7 @@ export default function CodexScreen() {
             />
             <Stat
               label="Tide Tax Threshold"
-              value={formatGold(500000)}
+              value={formatGold(CONFIG.tideTaxThreshold)}
               color="#FF6F91"
             />
             <Stat
@@ -686,11 +693,12 @@ export default function CodexScreen() {
           <GlassPanel className="p-3 text-xs">
             <div className="font-bold mb-1 font-display">Sink Volume</div>
             <div className="opacity-80 space-y-1">
-              <div>• Hall fee: {CONFIG_HALL_FEE * 100}% per hire (half burned, half to pool).</div>
-              <div>• Bazaar fee: {CONFIG_BAZAAR_FEE * 100}% per trade (removed entirely).</div>
+              <div>• Hall fee: {CONFIG.hallFeePercent * 100}% per hire (half burned, half to the Tide Treasury).</div>
+              <div>• Bazaar fee: {CONFIG.bazaarFeePercent * 100}% per trade (1 point to the Tide Treasury, the rest burned).</div>
               <div>• Breed cost: 2.5K → 70K GOLD by breed count.</div>
-              <div>• Tide Tax: progressive above {formatGold(500000)} GOLD.</div>
-              <div>• Extra team slots: 50K → 500K GOLD each (slots 4-7).</div>
+              <div>• Tide Tithe on gold you earn: {TITHE_BRACKETS.map((b) => `${Math.round(b.rate * 100)}% from ${formatGold(b.minBalance)}`).join(" · ")} — balance before the reward sets the rate; spending is never tithed; escrow, refunds and sale proceeds are exempt.</div>
+              <div>• Tide Tax: {Math.round(TIDE_TAX_RATE * 100)}% of only the balance above {formatGold(CONFIG.tideTaxThreshold)} GOLD, once every {Math.round(TIDE_TAX_WINDOW_MS / (24 * 60 * 60 * 1000))} days, paid to the Tide Treasury — the first {formatGold(CONFIG.tideTaxThreshold)} is never taxed.</div>
+              <div>• Extra team slots: first 5 free, then {TEAM_SLOT_COSTS.map((c) => formatGold(c)).join(" → ")} GOLD.</div>
             </div>
           </GlassPanel>
 
@@ -709,10 +717,6 @@ export default function CodexScreen() {
     </div>
   );
 }
-
-// Constants imported once at module top
-const CONFIG_HALL_FEE = 0.1;
-const CONFIG_BAZAAR_FEE = 0.0385;
 
 function Stat({ label, value, color, icon }: { label: string; value: string; color?: string; icon?: React.ReactNode }) {
   return (

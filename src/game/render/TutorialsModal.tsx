@@ -21,7 +21,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../store/gameStore";
-import { GlassPanel, GlowButton, StatChip, SectionTitle, EmptyState } from "./ui";
+import { GlassPanel, GlowButton, StatChip, SectionTitle, EmptyState, formatGold } from "./ui";
+import { CONFIG, TIDE_TAX_RATE, TITHE_BRACKETS } from "../engine/config";
 
 // ---------- TYPES ----------
 
@@ -430,8 +431,9 @@ const TUTORIALS: Tutorial[] = [
         title: "Tide Tax",
         artHint: "🧾",
         body: [
-          "Large treasury transfers pay the Tide Tax, a progressive sink.",
-          "Split whale-sized transfers to stay under the waves.",
+          `Gold you EARN pays the Tide Tithe once your balance reaches ${formatGold(TITHE_BRACKETS[1].minBalance)}: ${TITHE_BRACKETS.slice(1).map((b) => `${Math.round(b.rate * 100)}% from ${formatGold(b.minBalance)}`).join(", ")}. Below that, earnings are taxed 0% — and spending is never tithed.`,
+          `Separately, the Tide Tax takes ${Math.round(TIDE_TAX_RATE * 100)}% of only the balance ABOVE ${formatGold(CONFIG.tideTaxThreshold)}, once a week. Your first ${formatGold(CONFIG.tideTaxThreshold)} can never be touched.`,
+          "Half of every tithe is burned forever; the other half funds the Tide Treasury, the prize reserve behind Tidewell Rewards. Escrow, refunds and sale proceeds are never tithed.",
         ],
       },
     ],

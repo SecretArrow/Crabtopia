@@ -51,14 +51,17 @@ describe("DailyRewardsModal", () => {
     const g0 = gold();
     const first = render(<DailyRewardsModal onClose={noop} />);
     fireEvent.click(screen.getByRole("button", { name: "Claim Reward" }));
-    expect(gold()).toBe(g0 + 400); // mock streak 5 -> cycle day 5 -> 400 GOLD
+    // Mock streak 5 -> cycle day 5 -> 400 GOLD gross. Tokenomics: the
+    // seeded balance is 100,000 (5% Tide Tithe bracket), so the claim
+    // nets 400 − 20 = 380. The once-per-day guard is what's on trial.
+    expect(gold()).toBe(g0 + 380);
     first.unmount();
 
     render(<DailyRewardsModal onClose={noop} />);
     expect(
       screen.queryByRole("button", { name: "Claim Reward" })
     ).toBeNull();
-    expect(gold()).toBe(g0 + 400);
+    expect(gold()).toBe(g0 + 380);
   });
 });
 
@@ -103,13 +106,15 @@ describe("CharterModal", () => {
     const first = render(<CharterModal onClose={noop} />);
     fireEvent.click(screen.getByRole("button", { name: "Active" }));
     settleAll();
-    expect(gold()).toBe(g0 + 640 + 410); // renter 640 + owner 410, once
+    // Renter 640 + owner 410, once. Tokenomics: both settle at the
+    // seeded 100,000 balance (5% Tide Tithe) → 640−32 and 410−20.
+    expect(gold()).toBe(g0 + 608 + 390);
     first.unmount();
 
     render(<CharterModal onClose={noop} />);
     fireEvent.click(screen.getByRole("button", { name: "Active" }));
     expect(screen.queryAllByRole("button", { name: /Settle now/ })).toHaveLength(0);
-    expect(gold()).toBe(g0 + 1050);
+    expect(gold()).toBe(g0 + 998);
   });
 });
 
@@ -129,8 +134,11 @@ describe("ClansModal", () => {
 
     const first = render(<ClansModal onClose={noop} />);
     joinStormcall(); // -1,000 fee; chest at 41,900 -> Bronze + Silver reached
-    claimChest(); // +2,000 +5,000
-    expect(gold()).toBe(g0 - 1000 + 7000);
+    claimChest(); // +2,000 +5,000 gross
+    // Tokenomics (Tide Tithe): after the join fee the balance is
+    // 99,000 (3% bracket) for the 2,000 chest → net 1,940; that crosses
+    // 100,000, so the 5,000 chest is tithed at 5% → net 4,750.
+    expect(gold()).toBe(g0 - 1000 + 1940 + 4750);
 
     fireEvent.click(screen.getByRole("button", { name: "Leave Clan" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
@@ -140,7 +148,7 @@ describe("ClansModal", () => {
     expect(
       screen.getAllByRole("button", { name: "Claimed ✓" }).length
     ).toBeGreaterThanOrEqual(2);
-    expect(gold()).toBe(g0 - 2000 + 7000);
+    expect(gold()).toBe(g0 - 2000 + 1940 + 4750);
     first.unmount();
   });
 });

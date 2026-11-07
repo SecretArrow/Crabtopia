@@ -495,7 +495,7 @@ export default function BazaarScreen() {
             {sellType === "crab" ? (
               <>
                 <div className="text-xs opacity-70">
-                  Pick an idle, non-Rookie crab. Sale fee: {CONFIG.bazaarFeePercent * 100}% (removed from economy).
+                  Pick an idle, non-Rookie crab. Sale fee: {CONFIG.bazaarFeePercent * 100}% (1 point funds the Tide Treasury, the rest is burned).
                 </div>
                 <div className="grid grid-cols-3 gap-2 max-h-[40vh] overflow-y-auto pr-1">
                   {player.crabs
