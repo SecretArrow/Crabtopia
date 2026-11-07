@@ -257,7 +257,13 @@ export interface QuestProgress {
  * defaults (all counters 0, Tide Tax anchor = first sight) on first use.
  */
 export interface EconomyLedger {
-  /** Net gold created by faucet credits (+ admin mints) over the save's life. */
+  /**
+   * Gold created by faucet credits (+ admin mints) over the save's
+   * life, GROSS of the tithe (the tithe's burned share is counted in
+   * totalBurned; portions of a credit paid out of the Tide Treasury
+   * are transfers, not creation, and are excluded). This is the
+   * counter the supply invariant is built on — see economy.ts.
+   */
   totalMinted: number;
   /** Gold permanently destroyed (tithe burn share, market fee burn share…). */
   totalBurned: number;
@@ -271,6 +277,33 @@ export interface EconomyLedger {
   treasuryOut: number;
   /** Anchor of the rolling 7-day Tide Tax window (ms epoch). */
   lastTideTaxAt: number;
+  // --- Supply constitution (tokenomics v2) ---
+  /**
+   * World GOLD in circulation. Invariant, at all times:
+   *   circulating = INITIAL_SUPPLY_GOLD + totalMinted − totalBurned,
+   *                 and ≤ MAX_SUPPLY_GOLD.
+   * Circulating changes ONLY through reward/gameplay mints (counted in
+   * totalMinted), burns (totalBurned) and counted admin mints — never
+   * through the passage of time. The interactive Tide Treasury is part
+   * of circulating (a transfer into/out of it never changes this
+   * number; burns do).
+   */
+  circulating: number;
+  /** Anchor of the rolling 365-day reward-minting window (ms epoch). */
+  emissionWindowStartAt: number;
+  /**
+   * Supply the current minting window started with. The window's
+   * allowance is TARGET_INFLATION_RATE × this — the 3% speed limit.
+   */
+  windowBaseCirculating: number;
+  /** Net GOLD created by reward mints inside the current window. */
+  emittedInWindow: number;
+  /** Stabilizer multiplier on SYSTEM prices (Genesis + NPC listings). Starts at 1. */
+  priceIndex: number;
+  /** Circulating snapshot taken at the last price-index adjustment. */
+  circulatingAtIndex: number;
+  /** Anchor of the rolling 30-day price-index window (ms epoch). */
+  lastIndexAt: number;
 }
 
 export interface PlayerProfile {
@@ -293,6 +326,10 @@ export interface PlayerProfile {
   dailyDiveResetAt: number;
   raidEnergy: number;
   raidEnergyResetAt: number;
+  /** Leviathan wins claimed in the current daily window (faucet taper). */
+  leviathanWinsToday?: number;
+  /** Anchor of the rolling 24h Leviathan taper window (ms epoch). */
+  leviathanWinsResetAt?: number;
   tutorialComplete: boolean;
   questProgress: QuestProgress[];
   discoveredBreeds: string[];

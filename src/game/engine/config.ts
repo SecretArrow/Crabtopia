@@ -78,6 +78,53 @@ export const MARKET_FEE_TREASURY_POINTS = 0.01;
 export const TIDE_TAX_RATE = 0.02;
 export const TIDE_TAX_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // rolling 7 days
 
+// ---------------------------------------------------------------------------
+// SUPPLY CONSTITUTION (tokenomics v2) — the hard monetary law of GOLD.
+// Implemented by src/game/engine/economy.ts; see docs/tokenomics.md §9+.
+// ---------------------------------------------------------------------------
+
+/** Hard cap: GOLD supply can NEVER exceed 21 billion. */
+export const MAX_SUPPLY_GOLD = 21_000_000_000;
+/** Genesis circulation: exactly 50% of the cap exists at genesis. */
+export const INITIAL_SUPPLY_GOLD = 10_500_000_000;
+/**
+ * The 3% SPEED LIMIT on reward minting: there is NO emission schedule
+ * and NO faucet of time — GOLD is created ONLY as gameplay rewards.
+ * In any rolling 365-day window, reward mints may add at most this
+ * share of the supply the window started with. Time alone mints
+ * nothing; the limit only paces what play can create.
+ */
+export const TARGET_INFLATION_RATE = 0.03;
+/** Milliseconds in a 365-day year — the pace window's time unit. */
+export const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
+/** The rolling reward-minting window: 365 days. */
+export const EMISSION_WINDOW_MS = MS_PER_YEAR;
+
+/**
+ * PRICE INDEX — the stabilizer on SYSTEM prices (Genesis + NPC Bazaar
+ * listings; never player-set prices, never sinks/fees). Recomputed on a
+ * rolling 30-day anchor from realized supply growth — which is purely
+ * gameplay-driven (rewards minted minus burns) — against the 3% pace;
+ * each adjustment is capped at ±2% and the index itself is clamped to
+ * [0.5, 3.0], so goods prices can never lurch. Minting exactly at the
+ * pace leaves the index untouched.
+ */
+export const PRICE_INDEX_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // rolling 30 days
+export const PRICE_INDEX_MAX_STEP = 0.02;
+export const PRICE_INDEX_MIN = 0.5;
+export const PRICE_INDEX_MAX = 3.0;
+
+/**
+ * LEVIATHAN faucet taper — retention design: the first win each day
+ * pays in full; grinding the same faucet the same day tapers off.
+ * Win #1 → 100%, #2 → 50%, #3 and beyond → 25% (of LEVIATHAN_WIN_GOLD).
+ * The consolation prize is never tapered. One-time rewards (quests,
+ * achievements) are never tapered either.
+ */
+export const LEVIATHAN_WIN_GOLD = 5000;
+export const LEVIATHAN_CONSOLATION_GOLD = 100;
+export const LEVIATHAN_TAPER_RATES: readonly number[] = [1, 0.5, 0.25];
+
 // Paid team slots: the first 5 team slots are free; slot 6 costs
 // 50,000 and slot 7 costs 120,000 (team cap = 5 + this list's length).
 // This is the single source — the store and TeamsScreen both import it.
