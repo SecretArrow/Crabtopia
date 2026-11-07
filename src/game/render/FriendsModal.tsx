@@ -8,6 +8,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { useGame } from "../store/gameStore";
+import { useLocalStorage } from "./useLocalStorage";
 import { FACTIONS } from "../content/factions";
 import { FactionId, ClassId } from "../types";
 import {
@@ -788,8 +789,18 @@ export default function FriendsModal({ onClose }: { onClose: () => void }) {
   const [confirmGift, setConfirmGift] = useState<GiftItem | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Friend | null>(null);
 
-  // Gift economy state (1 already sent today -> 2 remaining)
-  const [giftsSentToday, setGiftsSentToday] = useState(1);
+  // Gift economy state (1 already sent today -> 2 remaining). The daily
+  // count is persisted with its Jakarta day stamp: it used to be plain
+  // useState, so closing and reopening the modal reset the "3 per day"
+  // limit and the gold sink could be spent without bound.
+  const jakartaToday = Math.floor((Date.now() + 7 * 60 * 60 * 1000) / 86400000);
+  const [giftRecord, setGiftRecord] = useLocalStorage<{ day: number; count: number }>(
+    "crabtopia_friends_gifts_v1",
+    { day: jakartaToday, count: 1 }
+  );
+  const giftsSentToday = giftRecord.day === jakartaToday ? giftRecord.count : 1;
+  const setGiftsSentToday = (updater: (n: number) => number) =>
+    setGiftRecord({ day: jakartaToday, count: updater(giftsSentToday) });
   const [giftHistory, setGiftHistory] = useState<GiftHistoryEntry[]>(INITIAL_GIFT_HISTORY);
 
   const playerName = player?.name ?? "Shellwarden";

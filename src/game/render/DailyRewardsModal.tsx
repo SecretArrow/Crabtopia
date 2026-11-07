@@ -9,6 +9,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { useGame } from "../store/gameStore";
+import { useLocalStorage } from "./useLocalStorage";
 import {
   GlassPanel,
   GlowButton,
@@ -51,6 +52,11 @@ function nextJakartaMidnight(now: number): number {
   const local = now + JAKARTA_OFFSET_MS;
   const startOfToday = Math.floor(local / ONE_DAY_MS) * ONE_DAY_MS;
   return startOfToday + ONE_DAY_MS - JAKARTA_OFFSET_MS;
+}
+
+/** Index of the current Asia/Jakarta calendar day (days since epoch). */
+function jakartaDayIndex(now: number): number {
+  return Math.floor((now + JAKARTA_OFFSET_MS) / ONE_DAY_MS);
 }
 
 function tierForStreak(s: number): StreakTier {
@@ -249,7 +255,15 @@ export default function DailyRewardsModal({ onClose }: { onClose: () => void }) 
   const [streak] = useState(5);
   const [bestStreak] = useState(23);
   const [streakShields] = useState(1); // 1 shield charge per month
-  const [claimedToday, setClaimedToday] = useState(false);
+  // The claim pays REAL gold from the store, so "already claimed" must
+  // survive closing the modal: persist the Jakarta day index of the
+  // last claim. (Was ephemeral useState — reopen and claim again,
+  // without limit.)
+  const [lastClaimedDay, setLastClaimedDay] = useLocalStorage<number>(
+    "crabtopia_daily_rewards_claim_v1",
+    -1
+  );
+  const claimedToday = lastClaimedDay === jakartaDayIndex(Date.now());
 
   // ---- Live countdown to the next Asia/Jakarta midnight ----
   const [nextResetAt] = useState<number>(() => nextJakartaMidnight(Date.now()));
@@ -281,7 +295,7 @@ export default function DailyRewardsModal({ onClose }: { onClose: () => void }) 
     if (claimedToday) return;
     addGold(todayReward.gold);
     if (todayReward.xp > 0) addXp(todayReward.xp);
-    setClaimedToday(true);
+    setLastClaimedDay(jakartaDayIndex(Date.now()));
     pushToast({
       title: `Day ${todayReward.day} claimed: ${todayReward.summary}!`,
       description: "Streak secured. Next reward unlocks at Jakarta midnight.",

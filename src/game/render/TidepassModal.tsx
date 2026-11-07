@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { useGame } from "../store/gameStore";
+import { useLocalStorage } from "./useLocalStorage";
 import {
   GlassPanel,
   GlowButton,
@@ -242,8 +243,23 @@ export function TidepassModal({ onClose }: { onClose: () => void }) {
   const [seasonWeek] = useState<number>(3);
   const [seasonXp] = useState<number>(4250);
   const [seasonXpMax] = useState<number>(XP_PER_TIER * TIERS);
-  const [claimedFree, setClaimedFree] = useState<Set<number>>(new Set());
-  const [claimedSupporter, setClaimedSupporter] = useState<Set<number>>(new Set());
+  // Claimed tiers pay REAL gold from the store, so they must persist
+  // across modal opens — they were ephemeral useState Sets, and every
+  // reopen re-paid every unlocked gold tier. Stored per season.
+  const [claimedFreeArr, setClaimedFreeArr] = useLocalStorage<number[]>(
+    `crabtopia_tidepass_free_s${SEASON_NUMBER}_v1`,
+    []
+  );
+  const [claimedSupporterArr, setClaimedSupporterArr] = useLocalStorage<number[]>(
+    `crabtopia_tidepass_supporter_s${SEASON_NUMBER}_v1`,
+    []
+  );
+  const claimedFree = new Set(claimedFreeArr);
+  const claimedSupporter = new Set(claimedSupporterArr);
+  const setClaimedFree = (updater: (prev: Set<number>) => Set<number>) =>
+    setClaimedFreeArr([...updater(new Set(claimedFreeArr))]);
+  const setClaimedSupporter = (updater: (prev: Set<number>) => Set<number>) =>
+    setClaimedSupporterArr([...updater(new Set(claimedSupporterArr))]);
   const [supporterUnlocked, setSupporterUnlocked] = useState<boolean>(false);
   const [showXpSources, setShowXpSources] = useState<boolean>(false);
 
@@ -270,6 +286,8 @@ export function TidepassModal({ onClose }: { onClose: () => void }) {
   function claimFree(tier: number) {
     const r = FREE_REWARDS.find((x) => x.tier === tier);
     if (!r) return;
+    if (claimedFree.has(tier)) return; // already claimed (persisted)
+    if (tier > currentTier) return; // tier not unlocked yet
     setClaimedFree((prev) => new Set(prev).add(tier));
     if (r.kind === "gold" && r.gold) {
       addGold(r.gold);
@@ -296,6 +314,8 @@ export function TidepassModal({ onClose }: { onClose: () => void }) {
   function claimSupporter(tier: number) {
     const r = SUPPORTER_REWARDS.find((x) => x.tier === tier);
     if (!r) return;
+    if (claimedSupporter.has(tier)) return; // already claimed (persisted)
+    if (tier > currentTier) return; // tier not unlocked yet
     setClaimedSupporter((prev) => new Set(prev).add(tier));
     pushToast({
       title: `Received: ${r.name}`,
