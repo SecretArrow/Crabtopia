@@ -953,6 +953,13 @@ export const useGame = create<GameState>()(
       listCrabInHall: (crabId, fee) => {
         const player = get().player;
         if (!player) return;
+        // A hire fee below 1 is meaningless — and a NEGATIVE fee would make
+        // hireCrab pay the hirer (owner share exceeds the fee charged).
+        if (!Number.isFinite(fee) || fee < 1) {
+          get().pushToast({ title: "Hire fee must be at least 1 GOLD.", variant: "error" });
+          return;
+        }
+        fee = Math.round(fee);
         const crab = player.crabs.find((c) => c.id === crabId);
         if (!crab || crab.activity !== "idle") {
           get().pushToast({ title: "Crab not available.", variant: "error" });
@@ -1030,11 +1037,14 @@ export const useGame = create<GameState>()(
             },
           });
         }
-        // quest
-        const qp = get().player!.questProgress.map((q) =>
-          q.questId === "hire_crab" ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
-        );
-        set({ player: { ...get().player!, questProgress: qp } });
+        // quest — hiring a MERCENARY means someone else's crab; hiring
+        // back your own listed crab must not farm the quest.
+        if (listing.ownerId !== "player") {
+          const qp = get().player!.questProgress.map((q) =>
+            q.questId === "hire_crab" ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
+          );
+          set({ player: { ...get().player!, questProgress: qp } });
+        }
         // A hired NPC crab actually JOINS the player's roster. Previously
         // the fee was paid and the listing removed but the crab was never
         // delivered (a pure gold sink). Self-hires (hiring back your own
@@ -1149,6 +1159,13 @@ export const useGame = create<GameState>()(
       listCrabInBazaar: (crabId, price) => {
         const player = get().player;
         if (!player) return;
+        // Prices must be real: a non-positive price would hand the item
+        // away for free (or worse, pay the buyer via the seller credit).
+        if (!Number.isFinite(price) || price < 1) {
+          get().pushToast({ title: "Price must be at least 1 GOLD.", variant: "error" });
+          return;
+        }
+        price = Math.round(price);
         const crab = player.crabs.find((c) => c.id === crabId);
         if (!crab || crab.activity !== "idle") {
           get().pushToast({ title: "Crab not available.", variant: "error" });
@@ -1181,6 +1198,11 @@ export const useGame = create<GameState>()(
       listEggInBazaar: (eggId, price) => {
         const player = get().player;
         if (!player) return;
+        if (!Number.isFinite(price) || price < 1) {
+          get().pushToast({ title: "Price must be at least 1 GOLD.", variant: "error" });
+          return;
+        }
+        price = Math.round(price);
         const egg = player.eggs.find((e) => e.id === eggId);
         if (!egg) return;
         const listing: BazaarListing = {
@@ -1205,6 +1227,14 @@ export const useGame = create<GameState>()(
         if (!player) return false;
         const listing = get().bazaarListings.find((l) => l.id === listingId);
         if (!listing) return false;
+        // You cannot buy your own listing. For a crab, the listed crab is
+        // still in your roster, so a self-purchase appended a second copy
+        // of it (net cost: the fee only); for either item type it also
+        // farmed the bazaar_trade quest for free.
+        if (listing.sellerId === "player") {
+          get().pushToast({ title: "You can't buy your own listing.", variant: "warning" });
+          return false;
+        }
         if (player.gold < listing.price) {
           get().pushToast({ title: "Not enough GOLD.", variant: "error" });
           return false;
