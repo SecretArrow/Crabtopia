@@ -131,6 +131,21 @@ function makeId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
 
+/**
+ * Apply Shellwarden XP and derive the level from the same curve addXp
+ * uses (level L+1 at L*500 total XP). EVERY XP grant must go through
+ * here: four call sites used to add XP without recomputing the level,
+ * so the displayed/gating level silently lagged behind the XP total.
+ */
+function withXp(player: PlayerProfile, amount: number): PlayerProfile {
+  const shellwardenXp = player.shellwardenXp + amount;
+  let shellwardenLevel = player.shellwardenLevel;
+  while (shellwardenXp >= shellwardenLevel * 500) {
+    shellwardenLevel++;
+  }
+  return { ...player, shellwardenXp, shellwardenLevel };
+}
+
 // NPC name generator
 const NPC_NAMES = [
   "Brinepinch", "Oldshell", "Tidecrest", "Goldfoot", "Riftclaw",
@@ -719,14 +734,16 @@ export const useGame = create<GameState>()(
         const totalReward = reward + bonus;
         set({
           worldSites: newWorldSites,
-          player: {
-            ...player,
-            gold: player.gold + totalReward,
-            crabs,
-            digSites,
-            questProgress: qp,
-            shellwardenXp: player.shellwardenXp + 50,
-          },
+          player: withXp(
+            {
+              ...player,
+              gold: player.gold + totalReward,
+              crabs,
+              digSites,
+              questProgress: qp,
+            },
+            50
+          ),
         });
         get().pushToast({
           title: `+${totalReward} GOLD claimed!`,
@@ -931,14 +948,16 @@ export const useGame = create<GameState>()(
 
         set({
           worldSites: newWorldSites,
-          player: {
-            ...player,
-            gold: player.gold + totalRaiderReward,
-            raidEnergy: player.raidEnergy - 1,
-            raids: [raid, ...player.raids].slice(0, 20),
-            questProgress: qp,
-            shellwardenXp: player.shellwardenXp + (result.winner === "raider" ? 80 : 30),
-          },
+          player: withXp(
+            {
+              ...player,
+              gold: player.gold + totalRaiderReward,
+              raidEnergy: player.raidEnergy - 1,
+              raids: [raid, ...player.raids].slice(0, 20),
+              questProgress: qp,
+            },
+            result.winner === "raider" ? 80 : 30
+          ),
           battleReplay: raid,
         });
 
@@ -1109,14 +1128,16 @@ export const useGame = create<GameState>()(
           q.questId === "breed_crab" ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
         );
         set({
-          player: {
-            ...player,
-            gold: player.gold - cost,
-            crabs,
-            eggs: [...player.eggs, egg],
-            questProgress: qp,
-            shellwardenXp: player.shellwardenXp + 100,
-          },
+          player: withXp(
+            {
+              ...player,
+              gold: player.gold - cost,
+              crabs,
+              eggs: [...player.eggs, egg],
+              questProgress: qp,
+            },
+            100
+          ),
         });
         get().pushToast({
           title: `Egg created! Hatches in ${Math.round(CONFIG.eggHatchMs / 60000)} min.`,
@@ -1140,14 +1161,16 @@ export const useGame = create<GameState>()(
           q.questId === "hatch_egg" ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
         );
         set({
-          player: {
-            ...player,
-            crabs: [...player.crabs, crab],
-            eggs: player.eggs.filter((e) => e.id !== eggId),
-            questProgress: qp,
-            shellwardenXp: player.shellwardenXp + 150,
-            discoveredBreeds: [...new Set([...player.discoveredBreeds, crab.breedId])],
-          },
+          player: withXp(
+            {
+              ...player,
+              crabs: [...player.crabs, crab],
+              eggs: player.eggs.filter((e) => e.id !== eggId),
+              questProgress: qp,
+              discoveredBreeds: [...new Set([...player.discoveredBreeds, crab.breedId])],
+            },
+            150
+          ),
         });
         get().pushToast({
           title: `${crab.name} hatched!`,
@@ -1353,12 +1376,7 @@ export const useGame = create<GameState>()(
       addXp: (amount) => {
         const player = get().player;
         if (!player) return;
-        const newXp = player.shellwardenXp + amount;
-        let newLevel = player.shellwardenLevel;
-        while (newXp >= newLevel * 500) {
-          newLevel++;
-        }
-        set({ player: { ...player, shellwardenXp: newXp, shellwardenLevel: newLevel } });
+        set({ player: withXp(player, amount) });
       },
 
       claimQuest: (questId) => {
