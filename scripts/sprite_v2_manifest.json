@@ -1,0 +1,1396 @@
+{
+  "classes": {
+    "bulwark": {
+      "sheets": {
+        "master": "spritesheet-bulwark-v3-nogrid.png",
+        "loco": "media-generation-spritesheet-bulwark-locomotion-0-4df9b8fb-60c8-4e9b-9318-94b928357754.webp",
+        "action": "media-generation-spritesheet-bulwark-action-0-22a42d4e-0a10-4085-9874-5ebf560cd5ff.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:3",
+            "loco:4",
+            "loco:5"
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:1"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:21",
+            "loco:22"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:9",
+            "loco:10",
+            "loco:11"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:15",
+            "loco:16",
+            "loco:17"
+          ],
+          "fps": 14,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "master:10",
+            "master:11"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:19",
+            "loco:6"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:20",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4",
+            "action:5"
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "3": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "action:6",
+            "action:7",
+            "action:8"
+          ],
+          "fps": 15,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:16",
+            "master:12"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:13",
+            "action:14",
+            "action:15"
+          ],
+          "fps": 12,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:12",
+            "master:23",
+            "action:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:18",
+            "master:14",
+            "action:12"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "master:19",
+            "action:20",
+            "action:21"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:20",
+            "loco:23"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:21"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "master:13"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:16",
+            "master:12"
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "hit": {
+          "frames": [
+            "action:18",
+            "master:14",
+            "action:12"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "master:19",
+            "action:20",
+            "action:21"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      }
+    },
+    "pincher": {
+      "sheets": {
+        "master": "media-generation-spritesheet-pincher-v3-neat-0-ffae4a55-f21b-410b-8223-74a59a356d7e.webp",
+        "loco": "media-generation-spritesheet-pincher-locomotion-0-1865f39a-d1b7-471f-a86e-cb0c4c29af05.webp",
+        "action": "media-generation-spritesheet-pincher-action-0-b6929172-f83c-4050-b1b2-70492cae1f4f.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:3",
+            "loco:4",
+            "loco:5"
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:1"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:22",
+            "loco:21"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:9",
+            "loco:10",
+            "loco:11"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:15",
+            "loco:16",
+            "loco:17"
+          ],
+          "fps": 14,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "master:10",
+            "master:11"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:19",
+            "loco:6"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:20",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4",
+            "action:5"
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "4": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "action:6",
+            "action:7",
+            "action:8"
+          ],
+          "fps": 15,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:10",
+            "master:16"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:12",
+            "action:13",
+            "action:15"
+          ],
+          "fps": 12,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:15",
+            "master:23",
+            "action:17"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:20",
+            "loco:23"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:21"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "master:17"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:10",
+            "master:16"
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "hit": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      }
+    },
+    "reaver": {
+      "sheets": {
+        "master": "media-generation-spritesheet-reaver-v3-neat-0-5e39d6a8-5530-46c9-8900-a64b8eb0c921.webp",
+        "loco": "media-generation-spritesheet-reaver-locomotion-0-6ea76a2a-239f-43ae-a861-ecc16467642b.webp",
+        "action": "media-generation-spritesheet-reaver-action-0-65d11619-db76-4766-8508-1c3569dc0414.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:3",
+            "loco:4",
+            "master:2"
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:3"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:21",
+            "loco:22"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:5",
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:9",
+            "loco:10"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:15",
+            "loco:16",
+            "loco:17"
+          ],
+          "fps": 14,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "loco:18",
+            "master:8"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:19",
+            "loco:5"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:22",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4"
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "3": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "action:5",
+            "action:6",
+            "action:7"
+          ],
+          "fps": 15,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:8",
+            "master:14"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:10",
+            "action:11",
+            "action:12"
+          ],
+          "fps": 12,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:13",
+            "action:14",
+            "action:15"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:16",
+            "action:17",
+            "master:10"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:17"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:20",
+            "action:21"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:18",
+            "loco:23"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:19"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "loco:22"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:8",
+            "master:14"
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "hit": {
+          "frames": [
+            "action:16",
+            "action:17",
+            "master:10"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:17"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:20",
+            "action:21"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      },
+      "layouts": {
+        "master": [
+          5,
+          5,
+          6,
+          6
+        ],
+        "loco": [
+          5,
+          7,
+          6,
+          6
+        ],
+        "action": [
+          5,
+          5,
+          6,
+          6
+        ]
+      }
+    },
+    "skitter": {
+      "sheets": {
+        "master": "media-generation-spritesheet-skitter-v3-neat-0-208584be-fe3a-47f4-8088-490d2b41cc6f.webp",
+        "loco": "media-generation-spritesheet-skitter-locomotion-0-f21c088a-3b37-4a9c-83f5-6cc86ea1f0cc.webp",
+        "action": "media-generation-spritesheet-skitter-action-0-c8f45682-456a-46b3-9c48-cad9059e5f1d.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:3",
+            "loco:4",
+            "loco:5"
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:1"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:22",
+            "loco:18"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:9",
+            "loco:10",
+            "loco:11"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:15",
+            "loco:16",
+            "loco:17"
+          ],
+          "fps": 15,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "master:10",
+            "master:11"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:20",
+            "loco:6"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:21",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4",
+            "action:5"
+          ],
+          "fps": 15,
+          "loop": "once",
+          "events": {
+            "3": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "action:6",
+            "action:7",
+            "action:8"
+          ],
+          "fps": 16,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:9",
+            "action:10"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:12",
+            "action:13",
+            "action:14"
+          ],
+          "fps": 13,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:15",
+            "action:16",
+            "action:17"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:12"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:20",
+            "loco:23"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:21"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "master:17"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:9",
+            "action:10"
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "hit": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:12"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      }
+    },
+    "tidecaller": {
+      "sheets": {
+        "master": "media-generation-spritesheet-tidecaller-v3-neat-0-797e15e3-bdbd-4dc7-b516-580ba05eb299.webp",
+        "loco": "media-generation-spritesheet-tidecaller-locomot-0-50703064-a4a4-4407-b673-87bcf9b5543e.webp",
+        "action": "media-generation-spritesheet-tidecaller-action-0-8308d1f3-fd95-4804-9ac2-209d73ff2e3c.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:3",
+            "loco:4",
+            "loco:5"
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:1"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:21",
+            "loco:19"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:9",
+            "loco:10",
+            "loco:11"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:15",
+            "loco:16",
+            "master:9"
+          ],
+          "fps": 14,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "master:10",
+            "master:11"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:18",
+            "loco:6"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:20",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4",
+            "action:5"
+          ],
+          "fps": 13,
+          "loop": "once",
+          "events": {
+            "3": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "action:6",
+            "action:7",
+            "action:8"
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:10",
+            "master:15"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:12",
+            "action:13",
+            "action:14"
+          ],
+          "fps": 12,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:14",
+            "action:16",
+            "action:17"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:12"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:18"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:19",
+            "loco:22"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:20"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "master:16"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:10",
+            "master:15"
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "hit": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:12"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:18"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      },
+      "layouts": {
+        "master": [
+          6,
+          6,
+          5,
+          6
+        ],
+        "loco": [
+          6,
+          6,
+          5,
+          6
+        ],
+        "action": [
+          6,
+          6,
+          6,
+          6
+        ]
+      }
+    },
+    "shellmender": {
+      "sheets": {
+        "master": "media-generation-spritesheet-shellmender-v3-nea-0-5b53fe73-96eb-41fb-992e-f75c17f5382c.webp",
+        "loco": "media-generation-spritesheet-shellmender-locomo-0-90cccc54-e533-4788-bf39-dbc1b781ae07.webp",
+        "action": "media-generation-spritesheet-shellmender-action-0-b1f1691e-23b8-4ee0-81fa-5e1f66749676.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:3",
+            "loco:4",
+            "loco:5"
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:1"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:22",
+            "loco:21"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:9",
+            "loco:10",
+            "loco:11"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:15",
+            "loco:16",
+            "loco:17"
+          ],
+          "fps": 13,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "master:10",
+            "master:11"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:19",
+            "loco:6"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:20",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4",
+            "action:5"
+          ],
+          "fps": 13,
+          "loop": "once",
+          "events": {
+            "3": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "action:6",
+            "action:7",
+            "action:8"
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:10",
+            "action:16"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:12",
+            "action:13",
+            "action:15"
+          ],
+          "fps": 12,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:12",
+            "action:14",
+            "action:15"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:20",
+            "loco:23"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:21"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "action:11"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:10",
+            "action:16"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hit": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "action:20",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      }
+    }
+  }
+}

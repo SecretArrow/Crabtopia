@@ -68,3 +68,4 @@ server.log
 
 # User uploads (sandbox-local)
 /upload/
+scripts/v2_inspect/
