@@ -32,6 +32,11 @@ import {
   firstAvailableTeam,
   teamAvailability,
 } from "../engine/teamEligibility";
+import {
+  leviathanWinAmount,
+  leviathanWinsTodayOf,
+} from "../engine/economy";
+import { LEVIATHAN_WIN_GOLD } from "../engine/config";
 
 // ============================ TYPES ============================
 
@@ -427,6 +432,7 @@ function RewardCard({
 export default function LeviathanRaidModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player)!;
   const creditGold = useGame((s) => s.creditGold);
+  const claimLeviathanWin = useGame((s) => s.claimLeviathanWin);
   const addXp = useGame((s) => s.addXp);
   const progressQuest = useGame((s) => s.progressQuest);
   const pushToast = useGame((s) => s.pushToast);
@@ -456,6 +462,10 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
     return firstAvailableTeam(player.teams, byId)?.id ?? null;
   });
   const [shakeBoss, setShakeBoss] = useState<boolean>(false);
+  // The tapered gold amount this victory actually paid (captured when
+  // the reward effect fires) — the victory screen shows the REAL
+  // number, not the headline 5,000.
+  const [victoryGold, setVictoryGold] = useState<number | null>(null);
 
   // ----- REFS (avoid stale closures in setTimeout) -----
   const stateRef = useRef({ raidState, phase, bossHP, turn, raidMembers });
@@ -504,11 +514,23 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
     if (rewardsClaimedRef.current) return;
     if (raidState === "victory") {
       rewardsClaimedRef.current = true;
-      creditGold(5000);
+      // Faucet taper (tokenomics v2): wins pay through
+      // claimLeviathanWin — today's 1st win 100%, 2nd 50%, 3rd+ 25%
+      // of 5,000 — and the Tide Tithe applies to the tapered amount.
+      const win = claimLeviathanWin();
+      setVictoryGold(win.amount);
       addXp(1000);
       // Stalwart Defender quest: repelling the Leviathan IS the raid
       // defense fantasy (NPC raids on player sites don't exist).
       progressQuest("defend_raid");
+      pushToast({
+        title: `Leviathan defeated! +${win.net.toLocaleString()} GOLD`,
+        description:
+          win.tax > 0
+            ? `Tide Tithe: -${win.tax.toLocaleString()} GOLD`
+            : undefined,
+        variant: "success",
+      });
       pushToast({
         title: "Received Leviathan Banner cosmetic!",
         description: "A banner of the fallen world-boss, hung in your hall.",
@@ -516,14 +538,18 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
       });
     } else if (raidState === "defeat") {
       rewardsClaimedRef.current = true;
-      creditGold(100);
+      // Consolation is deliberately NOT tapered.
+      const r = creditGold(100);
       pushToast({
-        title: "Consolation: 100 GOLD",
-        description: "The tide returns what the Leviathan took.",
+        title: `Consolation: ${r.net.toLocaleString()} GOLD`,
+        description:
+          r.tax > 0
+            ? `Tide Tithe: -${r.tax.toLocaleString()} GOLD`
+            : "The tide returns what the Leviathan took.",
         variant: "warning",
       });
     }
-  }, [raidState, creditGold, addXp, progressQuest, pushToast]);
+  }, [raidState, creditGold, claimLeviathanWin, addXp, progressQuest, pushToast]);
 
   // ----- JOIN RAID -----
   const handleJoinRaid = () => {
@@ -890,10 +916,23 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
                 <div className="text-xs flex flex-wrap gap-x-3 gap-y-1 items-center">
                   <span>🥚 Legendary Egg shard</span>
                   <span className="flex items-center gap-0.5">
-                    <GoldIcon size={12} /> 5,000 GOLD
+                    <GoldIcon size={12} />{" "}
+                    {leviathanWinAmount(
+                      leviathanWinsTodayOf(player, Date.now())
+                    ).toLocaleString()}{" "}
+                    GOLD
                   </span>
                   <span>✨ 1,000 XP</span>
                   <span>🎏 Leviathan Banner cosmetic</span>
+                </div>
+                <div className="text-[10px] opacity-70 mt-1">
+                  Next win today:{" "}
+                  {leviathanWinAmount(
+                    leviathanWinsTodayOf(player, Date.now())
+                  ).toLocaleString()}{" "}
+                  GOLD — first win each day pays full{" "}
+                  {LEVIATHAN_WIN_GOLD.toLocaleString()}; repeat wins taper
+                  to 50%, then 25%.
                 </div>
               </div>
 
@@ -1337,7 +1376,7 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
                 <RewardCard
                   icon={<GoldIcon size={22} />}
                   label="Gold"
-                  value="5,000"
+                  value={(victoryGold ?? LEVIATHAN_WIN_GOLD).toLocaleString()}
                   color="#FFD166"
                 />
                 <RewardCard

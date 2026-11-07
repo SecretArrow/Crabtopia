@@ -20,6 +20,11 @@ import {
 } from "../ui";
 import { CONFIG } from "../../engine/config";
 import {
+  economyOf,
+  effectiveListingPrice,
+  indexedPrice,
+} from "../../engine/economy";
+import {
   GENESIS_TOTAL,
   GENESIS_MARKET_COUNT,
   GENESIS_RESERVE_COUNT,
@@ -73,6 +78,9 @@ function RarityBadge({ rarity, className = "" }: { rarity: Rarity; className?: s
 
 export default function BazaarScreen() {
   const player = useGame((s) => s.player)!;
+  // Tokenomics price index: SYSTEM prices (NPC listings + Genesis)
+  // float with it; player-set prices never do. Index 1 = base prices.
+  const priceIndex = economyOf(player).priceIndex;
   const bazaarListings = useGame((s) => s.bazaarListings);
   const buyBazaarListing = useGame((s) => s.buyBazaarListing);
   const listCrabInBazaar = useGame((s) => s.listCrabInBazaar);
@@ -145,7 +153,11 @@ export default function BazaarScreen() {
     });
 
     list.sort((a, b) => {
-      if (sortKey === "price") return a.price - b.price;
+      if (sortKey === "price")
+        return (
+          effectiveListingPrice(a, priceIndex) -
+          effectiveListingPrice(b, priceIndex)
+        );
       if (sortKey === "bp") {
         const ca = NPC_CRAB_CACHE[a.itemId];
         const cb = NPC_CRAB_CACHE[b.itemId];
@@ -159,7 +171,7 @@ export default function BazaarScreen() {
       return RARITY_ORDER.indexOf(rb) - RARITY_ORDER.indexOf(ra);
     });
     return list;
-  }, [bazaarListings, search, itemType, factionFilter, classFilter, rarityFilter, sortKey]);
+  }, [bazaarListings, search, itemType, factionFilter, classFilter, rarityFilter, sortKey, priceIndex]);
 
   // Reset to page 1 whenever filters change
   const totalPages = Math.max(1, Math.ceil(filteredListings.length / PAGE_SIZE));
@@ -179,11 +191,11 @@ export default function BazaarScreen() {
         .map((l) => ({
           id: l.id,
           name: itemNameOf(l),
-          price: l.price,
+          price: effectiveListingPrice(l, priceIndex),
           ts: l.listedAt,
           itemType: l.itemType,
         })),
-    [bazaarListings]
+    [bazaarListings, priceIndex]
   );
 
   const resetFilters = () => {
@@ -387,6 +399,7 @@ export default function BazaarScreen() {
                       key={l.id}
                       listing={l}
                       playerGold={player.gold}
+                      priceIndex={priceIndex}
                       onBuy={() => buyBazaarListing(l.id)}
                     />
                   ))}
@@ -469,6 +482,7 @@ export default function BazaarScreen() {
           <GenesisPanel
             playerGold={player.gold}
             soldIds={genesisSoldIds}
+            priceIndex={priceIndex}
             onBuy={buyGenesisCrab}
           />
         )}
@@ -616,10 +630,12 @@ function Bubbles() {
 function GenesisPanel({
   playerGold,
   soldIds,
+  priceIndex,
   onBuy,
 }: {
   playerGold: number;
   soldIds: string[];
+  priceIndex: number;
   onBuy: (genesisNumber: number) => boolean;
 }) {
   const [gPage, setGPage] = useState(1);
@@ -655,6 +671,7 @@ function GenesisPanel({
             genesis={g}
             sold={soldSet.has(g.id)}
             playerGold={playerGold}
+            priceIndex={priceIndex}
             onBuy={() => onBuy(g.genesisNumber)}
           />
         ))}
@@ -694,17 +711,22 @@ function GenesisCard({
   genesis,
   sold,
   playerGold,
+  priceIndex,
   onBuy,
 }: {
   genesis: GenesisCrab;
   sold: boolean;
   playerGold: number;
+  priceIndex: number;
   onBuy: () => void;
 }) {
   const faction = FACTIONS[genesis.faction];
   const classDef = CLASSES[genesis.classId];
-  const fee = Math.round(genesis.price * CONFIG.bazaarFeePercent);
-  const canAfford = playerGold >= genesis.price;
+  // Genesis is a system good: the displayed price is the indexed
+  // effective price — exactly what buyGenesisCrab will charge.
+  const price = indexedPrice(genesis.price, priceIndex);
+  const fee = Math.round(price * CONFIG.bazaarFeePercent);
+  const canAfford = playerGold >= price;
   const isLegendary = genesis.rarity === "legendary";
 
   return (
@@ -778,7 +800,7 @@ function GenesisCard({
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <span className="text-[11px] font-bold flex items-center gap-0.5" style={{ color: "#FFD166" }}>
             <GoldIcon size={11} />
-            {formatGold(genesis.price)}
+            {formatGold(price)}
             <span className="text-[9px] opacity-50">fee {formatGold(fee)}</span>
           </span>
           {sold ? (
@@ -791,7 +813,7 @@ function GenesisCard({
               size="sm"
               disabled={!canAfford}
               onClick={onBuy}
-              title={canAfford ? `Buy Genesis #${genesis.genesisNumber}` : `Need ${formatGold(genesis.price)} GOLD`}
+              title={canAfford ? `Buy Genesis #${genesis.genesisNumber}` : `Need ${formatGold(price)} GOLD`}
             >
               Buy
             </GlowButton>
@@ -799,7 +821,7 @@ function GenesisCard({
         </div>
         {!sold && !canAfford && (
           <div className="text-[9px]" style={{ color: "#FF6F91" }}>
-            Not enough GOLD — need {formatGold(genesis.price)}.
+            Not enough GOLD — need {formatGold(price)}.
           </div>
         )}
       </div>
@@ -1004,39 +1026,46 @@ function topRarityOf(l: BazaarListing): Rarity {
 function ListingCard({
   listing,
   playerGold,
+  priceIndex,
   onBuy,
 }: {
   listing: BazaarListing;
   playerGold: number;
+  priceIndex: number;
   onBuy: () => void;
 }) {
   if (listing.itemType === "crab") {
     const crab = NPC_CRAB_CACHE[listing.itemId];
     if (!crab) return null;
-    return <CrabListingCard listing={listing} crab={crab} playerGold={playerGold} onBuy={onBuy} />;
+    return <CrabListingCard listing={listing} crab={crab} playerGold={playerGold} priceIndex={priceIndex} onBuy={onBuy} />;
   }
   const egg = NPC_EGG_CACHE[listing.itemId];
   if (!egg) return null;
-  return <EggListingCard listing={listing} egg={egg} playerGold={playerGold} onBuy={onBuy} />;
+  return <EggListingCard listing={listing} egg={egg} playerGold={playerGold} priceIndex={priceIndex} onBuy={onBuy} />;
 }
 
 function CrabListingCard({
   listing,
   crab,
   playerGold,
+  priceIndex,
   onBuy,
 }: {
   listing: BazaarListing;
   crab: Crab;
   playerGold: number;
+  priceIndex: number;
   onBuy: () => void;
 }) {
   const bp = crabBaseBP(crab);
   const faction = FACTIONS[crab.faction];
   const classDef = CLASSES[crab.classId];
   const breed = BREEDS_BY_ID[crab.breedId];
-  const fee = Math.round(listing.price * CONFIG.bazaarFeePercent);
-  const canAfford = playerGold >= listing.price;
+  // NPC (system) listings display their indexed effective price —
+  // exactly what buyBazaarListing charges. Player listings never float.
+  const price = effectiveListingPrice(listing, priceIndex);
+  const fee = Math.round(price * CONFIG.bazaarFeePercent);
+  const canAfford = playerGold >= price;
 
   // top rarity across gene slots
   let topRarity: Rarity = "common";
@@ -1105,7 +1134,7 @@ function CrabListingCard({
             style={{ color: "#FFD166" }}
           >
             <GoldIcon size={11} />
-            {formatGold(listing.price)}
+            {formatGold(price)}
             <span className="text-[9px] opacity-50 ml-1">
               +{formatGold(fee)} fee · {listing.sellerName}
             </span>
@@ -1130,17 +1159,20 @@ function EggListingCard({
   listing,
   egg,
   playerGold,
+  priceIndex,
   onBuy,
 }: {
   listing: BazaarListing;
   egg: Egg;
   playerGold: number;
+  priceIndex: number;
   onBuy: () => void;
 }) {
   const faction = FACTIONS[egg.faction];
   const classDef = CLASSES[egg.classId];
-  const fee = Math.round(listing.price * CONFIG.bazaarFeePercent);
-  const canAfford = playerGold >= listing.price;
+  const price = effectiveListingPrice(listing, priceIndex);
+  const fee = Math.round(price * CONFIG.bazaarFeePercent);
+  const canAfford = playerGold >= price;
   const rarity: Rarity = egg.isLegendaryCandidate ? "legendary" : "common";
 
   return (
@@ -1188,7 +1220,7 @@ function EggListingCard({
             style={{ color: "#FFD166" }}
           >
             <GoldIcon size={11} />
-            {formatGold(listing.price)}
+            {formatGold(price)}
             <span className="text-[9px] opacity-50 ml-1">
               +{formatGold(fee)} fee · {listing.sellerName}
             </span>

@@ -17,8 +17,9 @@
 //
 // The global panels are an illustrative model, generated deterministically
 // from a seed so re-renders stay consistent within a timeRange selection.
-// The "Your Tide Ledger" panel is NOT model data: it renders this save's
-// real tokenomics counters (engine/economy.ts) and the live config rules.
+// The "Your Tide Ledger" and "GOLD Supply" panels are NOT model data:
+// they render this save's real tokenomics counters (engine/economy.ts)
+// and the live config rules.
 
 "use client";
 
@@ -27,6 +28,8 @@ import { useGame } from "../store/gameStore";
 import {
   CONFIG,
   MARKET_FEE_TREASURY_POINTS,
+  MAX_SUPPLY_GOLD,
+  TARGET_INFLATION_RATE,
   TIDE_TAX_RATE,
   TIDE_TAX_WINDOW_MS,
   TITHE_BRACKETS,
@@ -36,6 +39,7 @@ import {
   defaultEconomy,
   describeTithe,
   economyOf,
+  effectiveEmissionWindow,
 } from "../engine/economy";
 import {
   GlassPanel,
@@ -512,6 +516,8 @@ export default function EconomyHealthModal({
 
   // --- Your Tide Ledger: REAL tokenomics state from this save ---
   const eco = player ? economyOf(player) : defaultEconomy();
+  // The rolling 365-day reward-minting window (roll-aware view).
+  const win = effectiveEmissionWindow(eco, Date.now());
   const tithe = describeTithe(player?.gold ?? 0);
   const bracketLine = TITHE_BRACKETS.map(
     (b, i) =>
@@ -799,6 +805,89 @@ export default function EconomyHealthModal({
                 the same way: {Math.round(MARKET_FEE_TREASURY_POINTS * 100)}{" "}
                 point to the Treasury, the rest burned. Escrow, refunds
                 and your own money moving are never taxed.
+              </div>
+            </div>
+          </GlassPanel>
+
+          {/* 2b. GOLD Supply — the capped-supply constitution (v2).
+              REAL ledger data: this save's world-supply counters. */}
+          <GlassPanel className="p-4" glow={`${GOLD}22`}>
+            <SectionTitle
+              icon={<span aria-hidden>🪙</span>}
+              title="GOLD Supply"
+              action={
+                <span className="text-[10px] text-white/55">
+                  Hard cap {MAX_SUPPLY_GOLD.toLocaleString("en-US")} GOLD
+                </span>
+              }
+            />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <StatChip
+                label="Circulating"
+                value={eco.circulating.toLocaleString("en-US")}
+              />
+              <StatChip
+                label="Max supply"
+                value={MAX_SUPPLY_GOLD.toLocaleString("en-US")}
+              />
+              <StatChip
+                label="Price index"
+                value={`×${eco.priceIndex.toFixed(2)}`}
+              />
+              <StatChip
+                label="Minted this window"
+                value={`${win.emitted.toLocaleString("en-US")} / ${win.allowance.toLocaleString("en-US")}`}
+              />
+            </div>
+            <div className="mt-3">
+              <div className="flex justify-between text-[10px] text-white/60 mb-1">
+                <span>Emission: reward-driven · paced ≤{Math.round(TARGET_INFLATION_RATE * 100)}%/yr — {((eco.circulating / MAX_SUPPLY_GOLD) * 100).toFixed(1)}% of max supply in circulation</span>
+                <span>{((eco.circulating / MAX_SUPPLY_GOLD) * 100).toFixed(1)}%</span>
+              </div>
+              <div
+                className="h-2.5 rounded-full overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.08)" }}
+                role="progressbar"
+                aria-valuenow={Math.round((eco.circulating / MAX_SUPPLY_GOLD) * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Share of max GOLD supply in circulation"
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.min(100, (eco.circulating / MAX_SUPPLY_GOLD) * 100)}%`,
+                    background: `linear-gradient(90deg, ${TEAL}, ${GOLD})`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="mt-3 text-[11px] leading-relaxed text-white/70 space-y-1.5">
+              <div>
+                <span className="text-white font-semibold">
+                  The constitution:
+                </span>{" "}
+                GOLD supply can never exceed{" "}
+                {MAX_SUPPLY_GOLD.toLocaleString("en-US")}, and GOLD is
+                created ONLY as gameplay rewards — there is no emission
+                schedule and time alone mints nothing. Reward minting is
+                paced by a rolling 365-day window: at most{" "}
+                {Math.round(TARGET_INFLATION_RATE * 100)}% of the
+                window&apos;s starting supply per year (this window:{" "}
+                {win.emitted.toLocaleString("en-US")} minted of a{" "}
+                {win.allowance.toLocaleString("en-US")} allowance).
+              </div>
+              <div>
+                <span className="text-white font-semibold">
+                  Realized vs pace:
+                </span>{" "}
+                because supply moves only through rewards and burns, the
+                price index (×{eco.priceIndex.toFixed(2)}) tracks purely
+                gameplay-driven growth against the{" "}
+                {Math.round(TARGET_INFLATION_RATE * 100)}% pace — system
+                prices (Genesis, NPC Bazaar) adjust by at most 2% per
+                month when play pushes realized growth off pace.
+                Player-set prices and all fees never float.
               </div>
             </div>
           </GlassPanel>

@@ -10,6 +10,9 @@ import {
   CONFIG,
   QUESTS,
   TEAM_SLOT_COSTS,
+  INITIAL_SUPPLY_GOLD,
+  MAX_SUPPLY_GOLD,
+  TARGET_INFLATION_RATE,
   TIDE_TAX_RATE,
   TIDE_TAX_WINDOW_MS,
   TITHE_BRACKETS,
@@ -688,6 +691,21 @@ export default function CodexScreen() {
               value={`${player.eggs.length} incubating`}
               color="#FF6F91"
             />
+            <Stat
+              label="GOLD Max Supply"
+              value={MAX_SUPPLY_GOLD.toLocaleString("en-US")}
+              color="#FFD166"
+            />
+            <Stat
+              label="GOLD Initial Supply"
+              value={INITIAL_SUPPLY_GOLD.toLocaleString("en-US")}
+              color="#FFD166"
+            />
+            <Stat
+              label="Reward Mint Pace"
+              value={`≤${Math.round(TARGET_INFLATION_RATE * 100)}%/year`}
+              color="#7CF5E1"
+            />
           </div>
 
           <GlassPanel className="p-3 text-xs">
@@ -699,6 +717,7 @@ export default function CodexScreen() {
               <div>• Tide Tithe on gold you earn: {TITHE_BRACKETS.map((b) => `${Math.round(b.rate * 100)}% from ${formatGold(b.minBalance)}`).join(" · ")} — balance before the reward sets the rate; spending is never tithed; escrow, refunds and sale proceeds are exempt.</div>
               <div>• Tide Tax: {Math.round(TIDE_TAX_RATE * 100)}% of only the balance above {formatGold(CONFIG.tideTaxThreshold)} GOLD, once every {Math.round(TIDE_TAX_WINDOW_MS / (24 * 60 * 60 * 1000))} days, paid to the Tide Treasury — the first {formatGold(CONFIG.tideTaxThreshold)} is never taxed.</div>
               <div>• Extra team slots: first 5 free, then {TEAM_SLOT_COSTS.map((c) => formatGold(c)).join(" → ")} GOLD.</div>
+              <div>• Supply constitution: GOLD is capped at {MAX_SUPPLY_GOLD.toLocaleString("en-US")} forever; {INITIAL_SUPPLY_GOLD.toLocaleString("en-US")} circulated at genesis and the rest is an Emission Reserve released ONLY as game rewards — there is no emission schedule and time alone mints nothing — paced at ≤{Math.round(TARGET_INFLATION_RATE * 100)}% of supply per year, and never past the cap. Genesis and NPC Bazaar prices float with the price index (×1.00 at pace); player-set prices, slot costs and fees never float.</div>
             </div>
           </GlassPanel>
 
