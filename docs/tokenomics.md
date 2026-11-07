@@ -450,3 +450,56 @@ and `CONFIG.tideTaxThreshold` / `CONFIG.bazaarFeePercent` /
 `CONFIG.hallFeePercent`. Change them there only — engine, store and UI
 all read from that one source, and `tests/unit/economy.test.ts` +
 `tests/unit/tokenomicsV2.test.ts` pin the shipped values.
+
+## 14. Stamina, wounds & the recovery economy
+
+Stamina is the per-crab activity layer (engine: `engine/stamina.ts`);
+per-day caps stay player-wide as before. Every crab rests at
+`MAX_STAMINA = 100`, regenerating 20/hour lazily (no per-crab timers —
+`staminaOf` projects from an anchor timestamp), **refilling to 100
+at the daily reset** (the same rolling-24h anchor as the dive cap,
+`dailyDiveResetAt`). Deployment costs are charged when an activity
+starts: dive/mining/exploration 15, arena 10, raid/leviathan 20,
+tournament 15, breeding 10 per parent. A crab below the cost is
+*Exhausted* and cannot deploy; regen pauses while a crab is diving or
+**Wounded**.
+
+A crab that hits 0 HP in a raid or leviathan battle is Wounded for 45
+minutes (arena defeats never wound — the crab is *Winded*, −10
+stamina). The daily reset refills stamina but never clears a wound.
+
+Recovery supplies are sold for GOLD in the Bazaar's *Items & Supplies*
+tab (the Tideborne Boutique is real-money styles only, by its own hard
+rule — GOLD is never spent there). Prices are system prices and pass
+through `indexedPrice`: Tide Tonic (+50 stamina) 300, Tide Elixir
+(full) 550, Coral Salve (cure a wound) 400, Second Wind Incense (all
+recovery ×3 for 2h) 800. **100% of every supplies purchase goes to the
+Tide Treasury** (`treasury`/`treasuryIn` grow by the price; the
+player's gold falls by the price) — a pure transfer: nothing is minted
+or burned, so the supply identity is untouched. Use is refused (and
+the item kept) when it would do nothing: tonic/elixir at full
+stamina, elixir when it would restore less than a tonic, salve on a
+healthy crab.
+
+## 15. The item market (materials)
+
+Dropped materials carry a `baseValue` reference price
+(`data/materials.ts`). The Bazaar's Items & Supplies tab runs three
+flows, all ledger-clean:
+
+- **NPC shelf**: system material stacks at `indexedPrice(baseValue)`,
+  restocked as a fresh rotation when sold out. Buying pays the system
+  listing price through the normal seller path (3.85% market fee with
+  the §9 split: 1pp of price to the Treasury, the rest of the fee
+  burned).
+- **Player listings**: materials are **escrowed** out of inventory for
+  the listing's life; the unit price is hard-capped at 300% of the
+  reference. Cancel returns the escrow in full. NPC demand is a timed
+  simulation on the store tick (player *crab* listings have no such
+  simulation in this economy — they wait for a UI buyer): each tick,
+  a stack sells with probability `1 − (1 − p)^hoursElapsed` where
+  `p = 0.5/h` at ≤100% of reference, `0.1/h` at ≤200%, and **0 above
+  200%** — overpriced stacks sit forever until repriced. On a sale the
+  proceeds go through the existing seller path: 3.85% fee with the
+  §9 split, **proceeds never tithed** (the v1 rule). Players cannot
+  buy their own listings.
