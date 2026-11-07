@@ -6,6 +6,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useGame } from "../store/gameStore";
+import { useLocalStorage } from "./useLocalStorage";
 import { FACTIONS, FACTION_LIST } from "../content/factions";
 import { FactionId } from "../types";
 import {
@@ -362,7 +363,17 @@ export default function ClansModal({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<"browse" | "mine">("browse");
   const [myClanId, setMyClanId] = useState<string | null>(null);
   const [clanChestContrib, setClanChestContrib] = useState(0);
-  const [claimedTiers, setClaimedTiers] = useState<number[]>([]);
+  // Chest claims pay REAL gold, so they persist PER CLAN across modal
+  // opens and leave/rejoin cycles. They were ephemeral useState that
+  // handleLeave/handleJoin explicitly reset — join a clan with a fat
+  // chest, claim every reached tier, leave, rejoin, claim again:
+  // +6,000 GOLD net per cycle, without limit.
+  const [claimedByClan, setClaimedByClan] = useLocalStorage<
+    Record<string, number[]>
+  >("crabtopia_clan_chest_claims_v1", {});
+  const claimedTiers: number[] = myClanId
+    ? (claimedByClan[myClanId] ?? [])
+    : [];
   const [mockClans, setMockClans] = useState<Clan[]>(INITIAL_CLANS);
 
   // Browse filters
@@ -426,7 +437,6 @@ export default function ClansModal({ onClose }: { onClose: () => void }) {
     setMyClanId(clan.id);
     setView("mine");
     setTab("members");
-    setClaimedTiers([]);
     setClanChestContrib(0);
     pushToast({
       title: `Welcome to ${clan.name}!`,
@@ -479,7 +489,6 @@ export default function ClansModal({ onClose }: { onClose: () => void }) {
     setTab("members");
     setShowCreate(false);
     setNewClanName("");
-    setClaimedTiers([]);
     setClanChestContrib(0);
     pushToast({
       title: `Clan "${trimmed}" founded!`,
@@ -499,7 +508,8 @@ export default function ClansModal({ onClose }: { onClose: () => void }) {
     setMyClanId(null);
     setShowLeaveConfirm(false);
     setClanChestContrib(0);
-    setClaimedTiers([]);
+    // Claimed chest tiers are NOT reset on leave — they are persisted
+    // per clan precisely so leave/rejoin cannot farm them again.
     setView("browse");
     pushToast({
       title: `You left ${leftName}.`,
@@ -524,11 +534,18 @@ export default function ClansModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleClaim = (tierIdx: number) => {
+    if (!myClanId) return;
     if (claimedTiers.includes(tierIdx)) return;
     if (tierIdx < 0 || tierIdx >= CHEST_TIERS.length) return;
+    // The handler itself verifies the tier was actually reached — the
+    // disabled button used to be the only gate.
+    if (tierIdx > currentTierIdx) return;
     const tier = CHEST_TIERS[tierIdx];
     addGold(tier.reward);
-    setClaimedTiers((p) => [...p, tierIdx]);
+    setClaimedByClan((prev) => ({
+      ...prev,
+      [myClanId]: [...(prev[myClanId] ?? []), tierIdx],
+    }));
     pushToast({
       title: `Claimed ${tier.label} chest reward!`,
       description: `+${formatGold(tier.reward)} GOLD`,

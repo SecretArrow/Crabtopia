@@ -7,6 +7,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useGame } from "../store/gameStore";
+import { useLocalStorage } from "./useLocalStorage";
 import { FactionId, ClassId } from "../types";
 import { FACTIONS, FACTION_LIST } from "../content/factions";
 import { CLASSES } from "../content/classes";
@@ -223,7 +224,19 @@ export default function CharterModal({ onClose }: { onClose: () => void }) {
 
   const [view, setView] = useState<View>("browse");
   const [mockOpenCharters, setMockOpenCharters] = useState<CharterOffer[]>(MOCK_OPEN_CHARTERS);
-  const [myActiveCharters, setMyActiveCharters] = useState<ActiveCharter[]>(INITIAL_MY_ACTIVE);
+  // Closed (settled / ended / revoked) charter ids persist: the seeded
+  // active charters used to be re-seeded from INITIAL_MY_ACTIVE on every
+  // mount, so once their terms ended they could be settled again for
+  // +1,050 GOLD on every single reopen.
+  const [closedCharterIds, setClosedCharterIds] = useLocalStorage<string[]>(
+    "crabtopia_charter_closed_v1",
+    []
+  );
+  const [myActiveCharters, setMyActiveCharters] = useState<ActiveCharter[]>(() =>
+    INITIAL_MY_ACTIVE.filter((c) => !closedCharterIds.includes(c.id))
+  );
+  const closeCharter = (id: string) =>
+    setClosedCharterIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
   const [filterFaction, setFilterFaction] = useState<FactionId | "all">("all");
   const [sortBy, setSortBy] = useState<"bp" | "weeklyFee" | "ownerShare">("bp");
 
@@ -326,6 +339,7 @@ export default function CharterModal({ onClose }: { onClose: () => void }) {
   }
 
   function handleEndEarly(id: string) {
+    closeCharter(id);
     setMyActiveCharters((prev) => prev.filter((c) => c.id !== id));
     setEndCharterId(null);
     pushToast({
@@ -336,6 +350,7 @@ export default function CharterModal({ onClose }: { onClose: () => void }) {
   }
 
   function handleRevoke(id: string) {
+    closeCharter(id);
     setMyActiveCharters((prev) => prev.filter((c) => c.id !== id));
     setRevokeCharterId(null);
     pushToast({
@@ -350,6 +365,7 @@ export default function CharterModal({ onClose }: { onClose: () => void }) {
     if (!c) return;
     const amount = c.role === "renter" ? c.earningsToRenter : c.earningsToOwner;
     if (amount > 0) addGold(amount);
+    closeCharter(id);
     setMyActiveCharters((prev) => prev.filter((x) => x.id !== id));
     setSettleCharterId(null);
     pushToast({
