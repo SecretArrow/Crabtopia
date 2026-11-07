@@ -34,6 +34,8 @@ interface ArenaRewards {
   xpReward: number;
   itemsFound: { itemId: string; count: number }[];
   arenaId: string;
+  /** Factual post-battle insight lines (ArenaBattle computes them). */
+  insights?: string[];
 }
 
 interface BattleLogEntry {

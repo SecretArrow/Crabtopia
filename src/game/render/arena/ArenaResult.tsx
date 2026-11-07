@@ -21,6 +21,8 @@ export interface ArenaResultProps {
     xpReward: number;
     itemsFound: { itemId: string; count: number }[];
     arenaId: string;
+    /** Factual "why it went this way" lines from the battle sim. */
+    insights?: string[];
   };
   opponentName: string;
   onContinue: () => void;
@@ -480,6 +482,36 @@ export default function ArenaResult({
           )}
         </GlassPanel>
       </motion.div>
+
+      {/* Battle insights — why the fight went the way it did */}
+      {result.insights && result.insights.length > 0 && (
+        <motion.div
+          className="w-full max-w-md mt-4"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.85, type: "spring", bounce: 0.25, duration: 0.5 }}
+        >
+          <GlassPanel className="p-3.5">
+            <div
+              className="text-[11px] font-bold uppercase tracking-wide mb-1.5"
+              style={{ color: "rgba(234,246,255,0.6)" }}
+            >
+              Battle Insights
+            </div>
+            <div className="flex flex-col gap-1">
+              {result.insights.map((line, i) => (
+                <div
+                  key={i}
+                  className="text-xs font-semibold"
+                  style={{ color: "rgba(234,246,255,0.85)" }}
+                >
+                  {line}
+                </div>
+              ))}
+            </div>
+          </GlassPanel>
+        </motion.div>
+      )}
 
       {/* CTA buttons */}
       <motion.div

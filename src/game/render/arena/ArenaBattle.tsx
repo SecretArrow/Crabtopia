@@ -128,7 +128,81 @@ export interface ArenaBattleProps {
     xpReward: number;
     itemsFound: { itemId: string; count: number }[];
     arenaId: string;
+    /** Factual post-battle insight lines for the result screen. */
+    insights?: string[];
   }) => void;
+}
+
+/**
+ * Post-battle insights: up to 3 plain factual lines about WHY the
+ * battle went the way it did, computed from the finished sim's event
+ * stream + battle totals (no extra state, nothing persisted).
+ */
+export function computeBattleInsights(
+  state: ArenaBattleState,
+  events: readonly SimEvent[],
+): string[] {
+  const nameOf = (id: string): string =>
+    [...state.player, ...state.enemy].find((c) => c.crabId === id)?.name ??
+    id;
+  const lines: string[] = [];
+
+  // Damage race — who actually out-damaged whom.
+  const dmg = state.totalDamageDealt;
+  if (dmg.player > 0 || dmg.enemy > 0) {
+    lines.push(
+      `⚖️ Damage dealt — you ${dmg.player.toLocaleString()} vs enemy ${dmg.enemy.toLocaleString()}`,
+    );
+  }
+
+  // Biggest single hit of the battle.
+  let best: { actorId: string; targetId: string; damage: number } | null =
+    null;
+  for (const e of events) {
+    if (
+      (e.type === "strike" || e.type === "projectileHit") &&
+      (!best || e.damage > best.damage)
+    ) {
+      best = { actorId: e.actorId, targetId: e.targetId, damage: e.damage };
+    }
+  }
+  if (best && best.damage > 0) {
+    lines.push(
+      `💥 Biggest hit: ${nameOf(best.actorId)} → ${nameOf(best.targetId)} for ${best.damage}`,
+    );
+  }
+
+  // First crab to fall, and who landed the blow that dropped it.
+  const firstDeath = events.find((e) => e.type === "death");
+  if (firstDeath && firstDeath.type === "death") {
+    let killer: string | null = null;
+    for (let i = events.length - 1; i >= 0; i--) {
+      const e = events[i];
+      if (
+        e.at <= firstDeath.at &&
+        (e.type === "strike" || e.type === "projectileHit") &&
+        e.targetId === firstDeath.targetId
+      ) {
+        killer = e.actorId;
+        break;
+      }
+    }
+    lines.push(
+      killer
+        ? `💀 First to fall: ${nameOf(firstDeath.targetId)}, taken down by ${nameOf(killer)}`
+        : `💀 First to fall: ${nameOf(firstDeath.targetId)}`,
+    );
+  }
+
+  // Control story: freezes that actually landed, and daze fumbles.
+  const freezes = events.filter(
+    (e) => e.type === "statusApplied" && e.status === "freeze",
+  ).length;
+  if (freezes > 0) lines.push(`❄️ Freezes landed: ${freezes}`);
+  const fumbles = events.filter((e) => e.type === "actionFumbled").length;
+  if (fumbles > 0) lines.push(`😵 Dizzy fumbles: ${fumbles}`);
+
+  return lines.slice(0, 3);
 }
 
 // ---------------------------------------------------------------------------
@@ -713,9 +787,10 @@ export default function ArenaBattle({
         xpReward: rewards.xpReward,
         itemsFound: rewards.itemsFound,
         arenaId,
+        insights: computeBattleInsights(state, sim.events),
       });
     }, 1600);
-  }, [state, entryCost, onComplete, arenaId, battleTimeout]);
+  }, [state, sim, entryCost, onComplete, arenaId, battleTimeout]);
   const finishBattleRef = useRef(finishBattle);
   useEffect(() => {
     finishBattleRef.current = finishBattle;
