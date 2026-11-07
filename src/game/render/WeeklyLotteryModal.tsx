@@ -38,9 +38,12 @@ function nextSundayJakarta8pm(now: number): number {
 // --- Mock constants (would come from the server in production) ---
 const COMMITTED_HASH =
   "a7c1f3b9d2e84a6c0b1f5e3d7a9c2b4e8f0a1d3c5e7b9d2f4a6c8e0b2d4f6a8"; // 64 hex
-const LAST_DRAW_SEED = "1f4a9c8b2e7d3a6f5c0b8e1d4a7f2c9b"; // 32 hex
-const LAST_DRAW_HASH =
-  "b8d2e4ca1f9b3e7d6a5c4b3e2d1f0a9c8b7e6d5c4b3a2f1e0d9c8b7a6e5d4c3b"; // 64 hex
+export const LAST_DRAW_SEED = "1f4a9c8b2e7d3a6f5c0b8e1d4a7f2c9b"; // 32 hex
+// The REAL sha256(LAST_DRAW_SEED) — the "Hash matches commitment" badge
+// next to it used to sit over an invented digest that did not hash from
+// the revealed seed at all. Pinned by tests/unit/lottery.test.ts.
+export const LAST_DRAW_HASH =
+  "fcd109036b1b52c01947c9d07effb2bf10b40beac93467dcd77cb871175b1dae"; // 64 hex
 const LAST_DRAW_DATE = "Sunday, 3 Nov 2024";
 const ESTIMATED_TOTAL_ENTRIES = 5000;
 
@@ -67,7 +70,7 @@ interface PrizeTier {
   gold: number;
   accent: string;
 }
-const PRIZE_TIERS: PrizeTier[] = [
+export const PRIZE_TIERS: PrizeTier[] = [
   {
     id: "grand_tide",
     name: "Grand Tide",
@@ -109,6 +112,14 @@ const PRIZE_TIERS: PrizeTier[] = [
     accent: "#C9D6EE",
   },
 ];
+
+// Totals are DERIVED from the tier table. The header and prize-pool
+// summary used to hardcode "611 winners · 5,890 GOLD total", which
+// contradicts the table printed directly beneath them (564 winners,
+// 23,000 GOLD) — the most recent past draw in PAST_DRAWS (564 winners)
+// agrees with the table.
+export const TOTAL_WINNERS = PRIZE_TIERS.reduce((s, t) => s + t.winners, 0);
+export const TOTAL_GOLD = PRIZE_TIERS.reduce((s, t) => s + t.winners * t.gold, 0);
 
 interface LastWinner {
   rank: number;
@@ -553,7 +564,7 @@ export default function WeeklyLotteryModal({ onClose }: { onClose: () => void })
               title="Prize Tiers"
               action={
                 <span className="text-[10px] text-white/55">
-                  611 winners · 5,890 GOLD total
+                  {TOTAL_WINNERS.toLocaleString()} winners · {TOTAL_GOLD.toLocaleString()} GOLD total
                 </span>
               }
             />
@@ -616,7 +627,7 @@ export default function WeeklyLotteryModal({ onClose }: { onClose: () => void })
               <span className="font-bold" style={{ color: "#FFD166" }}>
                 Total prize pool:
               </span>{" "}
-              1 pure legendary crab · 3 rare eggs · 5,890 GOLD · 10 cosmetics · 611 winners.
+              1 pure legendary crab · 3 rare eggs · {TOTAL_GOLD.toLocaleString()} GOLD · 10 cosmetics · {TOTAL_WINNERS.toLocaleString()} winners.
             </div>
             <p className="text-[10px] text-white/55 mt-2 leading-snug">
               Odds depend on entries. With {mineEntries} ticket{mineEntries === 1 ? "" : "s"} out
