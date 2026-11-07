@@ -250,10 +250,34 @@ export interface QuestProgress {
   claimed: boolean;
 }
 
+/**
+ * GOLD economy ledger (tokenomics, see docs/tokenomics.md). Additive
+ * save state: saves written before the tokenomics round have no ledger,
+ * so the field is optional and engine/economy.ts materializes safe
+ * defaults (all counters 0, Tide Tax anchor = first sight) on first use.
+ */
+export interface EconomyLedger {
+  /** Net gold created by faucet credits (+ admin mints) over the save's life. */
+  totalMinted: number;
+  /** Gold permanently destroyed (tithe burn share, market fee burn share…). */
+  totalBurned: number;
+  /** All tax this player has paid (Tide Tithe + Tide Tax). */
+  totalTaxPaid: number;
+  /** Current Tide Treasury balance (the developer-tax prize reserve). */
+  treasury: number;
+  /** Lifetime inflow into the Tide Treasury. */
+  treasuryIn: number;
+  /** Lifetime prizes paid OUT of the Tide Treasury (vs freshly minted). */
+  treasuryOut: number;
+  /** Anchor of the rolling 7-day Tide Tax window (ms epoch). */
+  lastTideTaxAt: number;
+}
+
 export interface PlayerProfile {
   id: string;
   name: string;
   gold: number;
+  economy?: EconomyLedger;
   crabs: Crab[];
   teams: Team[];
   eggs: Egg[];

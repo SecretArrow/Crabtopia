@@ -19,7 +19,15 @@ import {
   FormationPresetId,
 } from "../types";
 import { generateCrab } from "../engine/crabs";
-import { CONFIG, QUESTS, TEAM_SLOT_COSTS } from "../engine/config";
+import { CONFIG, QUESTS, TEAM_SLOT_COSTS, TIDE_TAX_RATE } from "../engine/config";
+import {
+  applyGoldCredit,
+  applyMarketFeeSplit,
+  applySinkSplit,
+  applyTideTax,
+  defaultEconomy,
+  economyOf,
+} from "../engine/economy";
 import { simulateBattle, BattleSide, TACTIC_CARDS } from "../engine/battle";
 import { crabBaseBP, teamBP } from "../engine/bp";
 import {
@@ -111,6 +119,22 @@ interface GameState {
 
   // progression
   addGold: (amount: number) => void;
+  /**
+   * THE faucet-credit action (tokenomics, engine/economy.ts): applies
+   * the Tide Tithe at the pre-credit balance and folds the credit into
+   * the economy ledger. Render-layer reward claims must use this, not
+   * addGold. opts.prize pays the net out of the Tide Treasury first.
+   * Returns what the player actually received ({ net, tax }).
+   */
+  creditGold: (
+    amount: number,
+    opts?: { tithe?: boolean; prize?: boolean }
+  ) => { net: number; tax: number };
+  /**
+   * Exempt own-money return (auction escrow refunds): never tithed and
+   * never counted as minted — the gold was the player's all along.
+   */
+  refundGold: (amount: number) => void;
   spendGold: (amount: number) => boolean;
   setGuardPostLevel: (level: number) => void;
   addXp: (amount: number) => void;
@@ -349,6 +373,7 @@ function createStarterPlayer(name: string): PlayerProfile {
     id: "player",
     name,
     gold: 2000,
+    economy: defaultEconomy(),
     crabs: starterCrabs,
     teams,
     eggs: [],
@@ -733,12 +758,14 @@ export const useGame = create<GameState>()(
           }
         }
         const totalReward = reward + bonus;
+        // Faucet credit → routed through the tokenomics helper (Tide
+        // Tithe at the pre-credit balance + economy ledger counters).
+        const credited = applyGoldCredit(player, totalReward);
         set({
           worldSites: newWorldSites,
           player: withXp(
             {
-              ...player,
-              gold: player.gold + totalReward,
+              ...credited.player,
               crabs,
               digSites,
               questProgress: qp,
@@ -746,9 +773,12 @@ export const useGame = create<GameState>()(
             50
           ),
         });
+        const notes: string[] = [];
+        if (bonus > 0) notes.push(`Gildclaw bonus: +${bonus}`);
+        if (credited.tax > 0) notes.push(`Tide Tithe: −${credited.tax}`);
         get().pushToast({
-          title: `+${totalReward} GOLD claimed!`,
-          description: bonus > 0 ? `Gildclaw bonus: +${bonus}` : undefined,
+          title: `+${credited.net} GOLD claimed!`,
+          description: notes.length ? notes.join(" · ") : undefined,
           variant: "success",
         });
       },
@@ -769,12 +799,17 @@ export const useGame = create<GameState>()(
             ? { ...s, state: "claimed" as const, occupiedBy: undefined, teamId: undefined }
             : s
         );
+        // Partial dive income is still a faucet credit → tithed/ledgered
+        // like a full claim.
+        const credited = applyGoldCredit(player, partial);
         set({
           worldSites: newWorldSites,
-          player: { ...player, gold: player.gold + partial, crabs },
+          player: { ...credited.player, crabs },
         });
         get().pushToast({
-          title: `Retreated with ${partial} GOLD (partial).`,
+          title: `Retreated with ${credited.net} GOLD (partial).`,
+          description:
+            credited.tax > 0 ? `Tide Tithe: −${credited.tax}` : undefined,
           variant: "warning",
         });
       },
@@ -972,12 +1007,14 @@ export const useGame = create<GameState>()(
           return q;
         });
 
+        // Raid winnings (steal + participation) are a faucet credit →
+        // tithed/ledgered via the tokenomics helper.
+        const credited = applyGoldCredit(player, totalRaiderReward);
         set({
           worldSites: newWorldSites,
           player: withXp(
             {
-              ...player,
-              gold: player.gold + totalRaiderReward,
+              ...credited.player,
               raidEnergy: player.raidEnergy - 1,
               raids: [raid, ...player.raids].slice(0, 20),
               questProgress: qp,
@@ -988,8 +1025,8 @@ export const useGame = create<GameState>()(
         });
 
         get().pushToast({
-          title: result.winner === "raider" ? `Raid won! +${totalRaiderReward} GOLD` : `Raid lost. +${participationReward} GOLD participation`,
-          description: `Raider BP ${result.raiderTotalBP} vs Defender BP ${result.defenderTotalBP}`,
+          title: result.winner === "raider" ? `Raid won! +${credited.net} GOLD` : `Raid lost. +${credited.net} GOLD participation`,
+          description: `Raider BP ${result.raiderTotalBP} vs Defender BP ${result.defenderTotalBP}${credited.tax > 0 ? ` · Tide Tithe: −${credited.tax}` : ""}`,
           variant: result.winner === "raider" ? "success" : "warning",
         });
         return raid;
@@ -1064,13 +1101,23 @@ export const useGame = create<GameState>()(
         const fee = listing.hireFee;
         const platformFee = Math.round(fee * CONFIG.hallFeePercent);
         const ownerShare = fee - platformFee;
-        // burn half of platform fee, half to community pool (we just remove it)
+        // Fee destination, now ledgered (tokenomics): half of the
+        // platform fee is burned, the other half flows to the Tide
+        // Treasury (the "community pool" this comment used to hand-wave).
         const burned = Math.round(platformFee / 2);
         set({
-          player: { ...player, gold: player.gold - fee },
+          player: applySinkSplit(
+            { ...player, gold: player.gold - fee },
+            platformFee - burned,
+            burned
+          ),
           hallListings: get().hallListings.filter((l) => l.id !== listingId),
         });
         // if owned by NPC, owner share is sunk (no actual player to credit). For player-owned, credit them.
+        // TOKENOMICS EXEMPTION: this credit is only reachable on a
+        // self-hire (hiring back your own listed crab) — it is the
+        // player's own money coming back, not faucet income, so it is
+        // never tithed and never counted as minted.
         if (listing.ownerId === "player") {
           const player2 = get().player!;
           const newListings = player2.hallListings.filter((l) => l.id !== listingId);
@@ -1321,7 +1368,20 @@ export const useGame = create<GameState>()(
             },
           });
         }
+        // Market fee split (tokenomics): the fee total is unchanged
+        // (seller still nets price − fee); of the price, 1.00pp flows
+        // to the Tide Treasury and the remainder of the fee is burned.
+        {
+          const current = get().player!;
+          const split = applyMarketFeeSplit(current, listing.price, fee);
+          if (split.treasuryShare > 0 || split.burned > 0) {
+            set({ player: split.player });
+          }
+        }
         // if seller was player, credit them
+        // TOKENOMICS EXEMPTION: seller proceeds are never tithed — the
+        // market fee above is the seller's tax. (Unreachable today:
+        // self-purchases are rejected above.)
         if (listing.sellerId === "player") {
           const p = get().player!;
           set({ player: { ...p, gold: p.gold + sellerShare } });
@@ -1367,10 +1427,14 @@ export const useGame = create<GameState>()(
         const qp = player.questProgress.map((q) =>
           q.questId === "bazaar_trade" ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
         );
+        // The Genesis sale carries the same Bazaar fee as a listing
+        // sale → same tokenomics split (1.00pp of price to the Tide
+        // Treasury, rest of the fee burned), folded into the ledger.
+        const split = applyMarketFeeSplit(player, result.price, result.fee);
         set({
           genesisSoldIds: result.newSoldIds,
           player: {
-            ...player,
+            ...split.player,
             gold: result.newGold,
             crabs: [...player.crabs, newCrab],
             questProgress: qp,
@@ -1386,8 +1450,43 @@ export const useGame = create<GameState>()(
       },
 
       addGold: (amount) => {
+        // Admin/debug mint (Admin Console). Left functional and NEVER
+        // tithed, but it is not invisible money: positive amounts are
+        // counted in the ledger as minted, negative as burned, so the
+        // Economy Health numbers stay honest even for cheat gold.
+        // Gameplay rewards must use creditGold instead.
         const player = get().player;
         if (!player) return;
+        if (!Number.isFinite(amount) || amount === 0) return;
+        const eco = economyOf(player);
+        set({
+          player: {
+            ...player,
+            gold: player.gold + amount,
+            economy: {
+              ...eco,
+              totalMinted: eco.totalMinted + Math.max(0, amount),
+              totalBurned: eco.totalBurned + Math.max(0, -amount),
+            },
+          },
+        });
+      },
+
+      creditGold: (amount, opts) => {
+        const player = get().player;
+        if (!player) return { net: 0, tax: 0 };
+        const r = applyGoldCredit(player, amount, opts);
+        if (r.player !== player) set({ player: r.player });
+        return { net: r.net, tax: r.tax };
+      },
+
+      refundGold: (amount) => {
+        // Exempt own-money return (e.g. auction escrow refunds): the
+        // debit that parked the gold was never counted as burned, so
+        // the return is never counted as minted — and never tithed.
+        const player = get().player;
+        if (!player) return;
+        if (!Number.isFinite(amount) || amount <= 0) return;
         set({ player: { ...player, gold: player.gold + amount } });
       },
 
@@ -1422,16 +1521,22 @@ export const useGame = create<GameState>()(
         if (!q) return;
         const qp = player.questProgress.find((x) => x.questId === questId);
         if (!qp || qp.claimed || qp.progress < qp.target) return;
+        // Quest rewards are faucet income → tithed/ledgered.
+        const credited = applyGoldCredit(player, q.reward);
         set({
           player: {
-            ...player,
-            gold: player.gold + q.reward,
+            ...credited.player,
             questProgress: player.questProgress.map((x) =>
               x.questId === questId ? { ...x, claimed: true } : x
             ),
           },
         });
-        get().pushToast({ title: `Quest complete: +${q.reward} GOLD!`, variant: "success" });
+        get().pushToast({
+          title: `Quest complete: +${credited.net} GOLD!`,
+          description:
+            credited.tax > 0 ? `Tide Tithe: −${credited.tax}` : undefined,
+          variant: "success",
+        });
       },
 
       progressQuest: (questId, amount = 1) => {
@@ -1477,16 +1582,31 @@ export const useGame = create<GameState>()(
           raidEnergy = CONFIG.dailyRaidEnergy;
           raidEnergyResetAt = now + 24 * 60 * 60 * 1000;
         }
-        set({
-          worldSites: newWorldSites,
-          player: {
+        // TIDE TAX (hoard tax): lazily assessed on this same tick —
+        // once per rolling 7-day window, TIDE_TAX_RATE of the balance
+        // above CONFIG.tideTaxThreshold, 100% to the Tide Treasury.
+        // Always surfaced with a toast when levied; never silent.
+        const tide = applyTideTax(
+          {
             ...player,
             dailyDiveCount,
             dailyDiveResetAt,
             raidEnergy,
             raidEnergyResetAt,
           },
+          now
+        );
+        set({
+          worldSites: newWorldSites,
+          player: tide.player,
         });
+        if (tide.tax > 0) {
+          get().pushToast({
+            title: `Tide Tax: −${tide.tax.toLocaleString()} GOLD to the Tide Treasury`,
+            description: `Weekly levy: ${Math.round(TIDE_TAX_RATE * 100)}% of your balance above ${CONFIG.tideTaxThreshold.toLocaleString()} GOLD. Your first ${CONFIG.tideTaxThreshold.toLocaleString()} is never taxed.`,
+            variant: "warning",
+          });
+        }
       },
 
       completeTutorial: () => {

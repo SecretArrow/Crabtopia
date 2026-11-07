@@ -29,6 +29,55 @@ export const BREED_COST_SCHEDULE = [
   2500, 8000, 18000, 35000, 70000, // 1st through 5th breed
 ];
 
+// ---------------------------------------------------------------------------
+// GOLD TOKENOMICS — the single source for every economy parameter.
+// Implemented by src/game/engine/economy.ts; every UI surface that quotes
+// these numbers must import them from here, never restate them as literals.
+// See docs/tokenomics.md for the full faucet/sink inventory and rationale.
+// ---------------------------------------------------------------------------
+
+/**
+ * TIDE TITHE — a progressive levy on gameplay gold INCOME (faucet credits:
+ * dive/mining/explore claims, arena & raid rewards, quests, daily rewards,
+ * tidepass tiers, clan chests, charter settlements, leviathan prizes).
+ * The rate is set by the player's gold balance BEFORE the credit:
+ *   < 25,000 → 0% · 25,000–99,999 → 3% · 100,000–499,999 → 5% · ≥ 500,000 → 8%
+ * tax = floor(amount × rate), never more than the credit itself, so small
+ * earnings (1–33 GOLD at 3%) round down to no tax at all. Spending is
+ * never tithed. Escrow deposits/refunds, purchase refunds, seller
+ * proceeds and starting gold are exempt (see economy.ts).
+ */
+export const TITHE_BRACKETS: readonly { minBalance: number; rate: number }[] = [
+  { minBalance: 0, rate: 0 },
+  { minBalance: 25000, rate: 0.03 },
+  { minBalance: 100000, rate: 0.05 },
+  { minBalance: CONFIG.tideTaxThreshold, rate: 0.08 },
+];
+
+/**
+ * Where each tithe gold goes: this share is BURNED forever (permanent
+ * sink); the remainder flows into the Tide Treasury (prize reserve).
+ */
+export const TITHE_BURN_SHARE = 0.5;
+
+/**
+ * MARKET FEE SPLIT — the existing Bazaar fee (bazaarFeePercent, charged
+ * to the seller) is unchanged in total; of the sale price, this many
+ * percentage POINTS are routed to the Tide Treasury and the rest of the
+ * fee is burned. (1.00pp treasury / 2.85pp burned of the 3.85% fee.)
+ */
+export const MARKET_FEE_TREASURY_POINTS = 0.01;
+
+/**
+ * TIDE TAX — the hoard tax the Codex/Tutorials have long documented:
+ * once per rolling window, this rate is charged on the balance ABOVE
+ * CONFIG.tideTaxThreshold only (the first 500,000 is never touched) and
+ * paid 100% into the Tide Treasury. Applied lazily by the store's
+ * tickTimers and always surfaced with a toast — never silent.
+ */
+export const TIDE_TAX_RATE = 0.02;
+export const TIDE_TAX_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // rolling 7 days
+
 // Paid team slots: the first 5 team slots are free; slot 6 costs
 // 50,000 and slot 7 costs 120,000 (team cap = 5 + this list's length).
 // This is the single source — the store and TeamsScreen both import it.
