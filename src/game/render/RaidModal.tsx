@@ -259,7 +259,7 @@ export default function RaidModal({ siteId, onClose }: Props) {
                     reinforcements.includes(c.id) ? "bg-[#12A7A0]/20 border-[#12A7A0]" : "bg-white/5 border-white/10"
                   }`}
                 >
-                  <CrabRenderer crab={c} size={56} animate={false} />
+                  <CrabRenderer crab={c} size={56} />
                   <div className="text-[9px] truncate">{c.name}</div>
                 </button>
               ))}
@@ -286,7 +286,7 @@ export default function RaidModal({ siteId, onClose }: Props) {
                       selected ? "bg-[#FFD166]/20 border-[#FFD166]" : "bg-white/5 border-white/10"
                     }`}
                   >
-                    <CrabRenderer crab={crab} size={56} animate={false} />
+                    <CrabRenderer crab={crab} size={56} />
                     <div className="text-[9px] truncate">{crab.name}</div>
                     <div className="text-[9px]" style={{ color: "#FFD166" }}>💰 {l.hireFee}</div>
                   </button>

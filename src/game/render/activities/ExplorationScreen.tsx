@@ -641,12 +641,11 @@ export default function ExplorationScreen() {
                               key={c.id}
                               crab={c}
                               size={44}
-                              animate
                             />
                           ))}
                         </div>
                       ) : (
-                        <CrabSprite crab={battle.champion} size={96} animated />
+                        <CrabSprite crab={battle.champion} size={96} />
                       )}
                       <div className="mt-1 text-xs font-bold text-center">
                         {battle.teamName || battle.champion.name}
@@ -671,7 +670,7 @@ export default function ExplorationScreen() {
                 {/* Enemy */}
                 <div className="flex flex-1 flex-col items-center">
                   <div className="text-[10px] uppercase text-white/50">Foe</div>
-                  <CrabSprite crab={battle.enemy} size={96} animated />
+                  <CrabSprite crab={battle.enemy} size={96} />
                   <div className="mt-1 text-xs font-bold text-center">
                     {battle.enemy.name}
                   </div>

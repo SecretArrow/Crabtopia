@@ -3,12 +3,13 @@
 // Previews render the crab as a LIVING sprite: its own per-class
 // battle sheet playing the idle clip (LivingCrab), wrapped in the
 // element aura + faction backdrop + optional emblem/halo chrome.
-// Props API unchanged — every caller (Crab cards, detail modal, hall,
-// bazaar, nursery, teams, map, raids) upgraded automatically. The
-// legacy `animate` prop is kept for API compatibility; previews are
-// always alive now (the only frozen render is prefers-reduced-motion,
-// honoured inside AnimatedCrab). `pose` lets showcase contexts pick a
-// livelier looping clip (e.g. the home hero walks in place).
+// Every caller (Crab cards, detail modal, hall, bazaar, nursery,
+// teams, map, raids) renders the living sprite. The legacy `animate`
+// prop was removed in Phase 4 — it claimed a frozen render the
+// component never produced; previews are always alive (the only
+// frozen render is prefers-reduced-motion, honoured inside
+// AnimatedCrab). `pose` lets showcase contexts pick a livelier
+// looping clip (e.g. the home hero walks in place).
 //
 // Sizes: named sizes are viewport-stepped tokens (see SIZE_MAP:
 // small/medium/large/full × phone/tablet/desktop), or any number via
@@ -31,7 +32,6 @@ type RenderSize = "small" | "medium" | "large" | "full" | number;
 interface Props {
   crab: Crab;
   size?: RenderSize;
-  animate?: boolean; // legacy compat — previews always animate now
   /** Looping clip for showcase contexts (default idle). */
   pose?: AnimState;
   className?: string;

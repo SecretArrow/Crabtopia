@@ -6,11 +6,12 @@
 // per-class battle sheet playing the idle clip (LivingCrab) — so no
 // preview anywhere is a stiff still image.
 //
-// The public props API is UNCHANGED so every caller (arena menu avatar &
-// Top Crabs, team builder, breeding, exploration, inventory, leaderboards,
-// loading screens…) upgraded automatically. `animated` and `rigPose` are
-// still accepted for API compatibility; previews are always alive now
-// (prefers-reduced-motion excepted, honoured inside AnimatedCrab).
+// Every caller (arena menu avatar & Top Crabs, team builder, breeding,
+// exploration, inventory, leaderboards, loading screens…) renders the
+// living sprite. The old `animated`/`rigPose` compat props were removed
+// in Phase 4: they claimed a frozen render the component never produced.
+// Previews are always alive (prefers-reduced-motion excepted, honoured
+// inside AnimatedCrab).
 
 "use client";
 
@@ -83,14 +84,8 @@ function PlaceholderSprite({ size }: { size: number }): React.ReactNode {
 export interface CrabSpriteProps {
   crab: Crab | null | undefined;
   size?: number;
-  animated?: boolean;
   showLegend?: boolean;
   className?: string;
-  /**
-   * Legacy puppet-rig pose hook (kept for API compatibility with
-   * PuppetCrab). Ignored by the sheet renderer.
-   */
-  rigPose?: import("../animation/puppetRig").RigPose;
 }
 
 export default function CrabSprite({

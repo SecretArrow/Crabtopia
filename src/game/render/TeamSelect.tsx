@@ -203,7 +203,7 @@ export default function TeamSelect({
                     className="rounded-lg bg-black/30 p-0.5 shrink-0"
                     title={`${crab.name} · ${CLASSES[crab.classId].name} Lv${crab.level}`}
                   >
-                    <CrabRenderer crab={crab} size={48} animate={false} />
+                    <CrabRenderer crab={crab} size={48} />
                   </div>
                 );
               })}

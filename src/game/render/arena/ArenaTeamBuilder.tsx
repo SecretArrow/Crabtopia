@@ -331,7 +331,7 @@ export default function ArenaTeamBuilder({
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="screen-enter min-h-screen flex flex-col"
       style={{ background: "linear-gradient(180deg, #0A1B3D 0%, #06122B 100%)" }}
     >
       {/* ---------- (1) HEADER ---------- */}
@@ -486,7 +486,7 @@ export default function ArenaTeamBuilder({
                             border: "1px solid rgba(248,113,113,0.35)",
                           }}
                         />
-                        <CrabRenderer crab={crab} size={oppPx} animate={false} />
+                        <CrabRenderer crab={crab} size={oppPx} />
                         <span
                           className="text-[8px] font-bold truncate"
                           style={{
@@ -600,7 +600,7 @@ export default function ArenaTeamBuilder({
                             border: "1px solid rgba(56,189,248,0.35)",
                           }}
                         />
-                        <CrabRenderer crab={crab} size={memberPx} animate={true} />
+                        <CrabRenderer crab={crab} size={memberPx} />
                         <span
                           className="text-[9px] font-bold truncate"
                           style={{ color: "#EAF6FF", maxWidth: "92%" }}

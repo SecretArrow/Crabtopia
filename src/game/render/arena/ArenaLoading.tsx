@@ -152,7 +152,7 @@ export default function ArenaLoading({
                 >
                   {/* Sprite sized for mobile (48); scaled up on md+ for visual breathing room */}
                   <div className="md:scale-125 md:origin-center">
-                    <CrabSprite crab={c} size={48} animated={true} />
+                    <CrabSprite crab={c} size={48} />
                   </div>
                 </div>
               </motion.div>
@@ -208,7 +208,7 @@ export default function ArenaLoading({
                     padding: 4,
                   }}
                 >
-                  <CrabSprite crab={c} size={48} animated={true} />
+                  <CrabSprite crab={c} size={48} />
                 </div>
                 <div
                   className="text-[8px] md:text-[11px] font-bold text-left truncate max-w-[60px] md:max-w-[90px]"

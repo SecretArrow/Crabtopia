@@ -118,7 +118,7 @@ export default function ArenaLeaderboard({
 
   return (
     <div
-      className="relative w-full min-h-[100svh] flex flex-col"
+      className="screen-enter relative w-full min-h-[100svh] flex flex-col"
       style={{ background: "linear-gradient(180deg, #0A1B3D 0%, #06122B 100%)" }}
     >
       <PlanktonField count={8} />
@@ -202,7 +202,7 @@ export default function ArenaLeaderboard({
                   {(() => {
                     const c = strongestCrabOf(row.opp);
                     return c ? (
-                      <CrabSprite crab={c} size={isCenter ? 80 : 64} animated={false} />
+                      <CrabSprite crab={c} size={isCenter ? 80 : 64} />
                     ) : (
                       <div className="flex items-center justify-center h-full text-xl">🦀</div>
                     );
@@ -450,7 +450,7 @@ function InspectPopover({
               }}
             >
               {strongest ? (
-                <CrabSprite crab={strongest} size={120} animated />
+                <CrabSprite crab={strongest} size={120} />
               ) : (
                 <div className="text-3xl">🦀</div>
               )}

@@ -408,7 +408,7 @@ export default function TeamsScreen() {
                                 }}
                                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors"
                               >
-                                <CrabRenderer crab={c} size={40} animate={false} />
+                                <CrabRenderer crab={c} size={40} />
                                 <div className="flex-1 min-w-0">
                                   <div className="text-xs font-bold truncate">
                                     {c.name}
@@ -601,7 +601,7 @@ export default function TeamsScreen() {
                                 boxShadow: isSel ? "0 0 10px rgba(124,245,225,0.35)" : undefined,
                               }}
                             >
-                              <CrabRenderer crab={crab} size={40} animate={false} />
+                              <CrabRenderer crab={crab} size={40} />
                               <span className="min-w-0">
                                 <span className="block text-[11px] font-bold truncate">{crab.name}</span>
                                 <span className="block text-[9px] text-white/55 truncate">

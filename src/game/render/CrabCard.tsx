@@ -121,7 +121,6 @@ export default function CrabCard({
           <CrabRenderer
             crab={crab}
             size={imgSize}
-            animate
             showEmblem={!compact}
             showLegendaryGlow
           />

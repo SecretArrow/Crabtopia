@@ -143,7 +143,7 @@ export default function ArenaMenu({
 
   return (
     <div
-      className="relative w-full min-h-[100svh] flex flex-col"
+      className="screen-enter relative w-full min-h-[100svh] flex flex-col"
       style={{ background: "linear-gradient(180deg, #0A1B3D 0%, #06122B 100%)" }}
     >
       <PlanktonField count={10} />
@@ -169,7 +169,7 @@ export default function ArenaMenu({
                 }}
               >
                 {strongest ? (
-                  <CrabSprite crab={strongest} size={96} animated />
+                  <CrabSprite crab={strongest} size={96} />
                 ) : (
                   <div className="flex items-center justify-center h-full text-2xl">🦀</div>
                 )}
@@ -258,7 +258,7 @@ export default function ArenaMenu({
                   >
                     <GlassPanel className="p-3 h-full flex flex-col items-center">
                       <div className="relative">
-                        <CrabSprite crab={c} size={96} animated />
+                        <CrabSprite crab={c} size={96} />
                         <span
                           className="absolute -top-1 -left-1 rounded-full text-[10px] font-bold w-5 h-5 flex items-center justify-center"
                           style={{

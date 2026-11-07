@@ -3,10 +3,9 @@
 // system. Every crab now resolves to a real frame-animated sprite sheet
 // (see sheetResolver): every class has its own dedicated sheet, plus a
 // faction hue tint. Rookie is a rank label only — it never changes a
-// crab's sheet or artwork. The
-// puppet rig (PuppetCrab) remains available as a standalone articulated
-// layer, but no screen needs it as a fallback anymore — there is no static
-// or procedural-blob rendering path left for crabs.
+// crab's sheet or artwork. There is no static or procedural-blob
+// rendering path left for crabs (the old puppet rig was deleted in
+// Phase 4 — it had no callers).
 
 "use client";
 

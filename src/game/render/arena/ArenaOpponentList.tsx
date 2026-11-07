@@ -78,7 +78,7 @@ export default function ArenaOpponentList({
 
   return (
     <div
-      className="relative w-full min-h-[100svh] flex flex-col"
+      className="screen-enter relative w-full min-h-[100svh] flex flex-col"
       style={{ background: "linear-gradient(180deg, #0A1B3D 0%, #06122B 100%)" }}
     >
       <PlanktonField count={8} />
@@ -331,7 +331,7 @@ function OpponentCard({
                   title={`${c.name} — Lv.${c.level} ${c.classId}`}
                 >
                   <div className="flex justify-center">
-                    <CrabSprite crab={c} size={52} animated={false} />
+                    <CrabSprite crab={c} size={52} />
                   </div>
                   <div className="flex items-center justify-center gap-0.5 mt-0.5">
                     <ClassIcon classId={c.classId} size={12} />

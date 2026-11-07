@@ -268,7 +268,6 @@ export default function HallScreen() {
                     <CrabRenderer
                       crab={crab}
                       size={56}
-                      animate={false}
                       showEmblem
                     />
                   </div>
@@ -357,7 +356,6 @@ export default function HallScreen() {
                         <CrabRenderer
                           crab={crab}
                           size={72}
-                          animate={false}
                           showEmblem
                         />
                       </div>
@@ -497,7 +495,7 @@ export default function HallScreen() {
                           : "bg-white/5 border-white/10"
                       }`}
                     >
-                      <CrabRenderer crab={c} size={56} animate={false} />
+                      <CrabRenderer crab={c} size={56} />
                       <div className="text-[9px] truncate mt-1">{c.name}</div>
                       <div className="text-[9px] opacity-60">
                         BP {formatBP(bp)}

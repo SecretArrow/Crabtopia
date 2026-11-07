@@ -113,7 +113,6 @@ function LineageArt({ crab: c, size }: { crab: Crab; size: number }) {
       classId={c.classId}
       faction={c.faction}
       size={size}
-      speed={0}
     />
   );
 }
@@ -296,7 +295,7 @@ function SiblingChip({ c }: { c: Crab }) {
       style={{ background: `${f.colors.dark}aa`, border: `1px solid ${f.colors.primary}55` }}
       title={`${c.name} · ${CLASSES[c.classId].name} · Gen ${c.generation}`}
     >
-      <ClassArtImage classId={c.classId} faction={c.faction} size={22} speed={0} />
+      <ClassArtImage classId={c.classId} faction={c.faction} size={22} />
       <span className="text-[9px] font-bold truncate" style={{ maxWidth: 76 }}>
         {c.name}
       </span>
@@ -427,7 +426,7 @@ export default function CrabDetailModal({ crab, onClose }: Props) {
                 <LivingCrab crab={crab} size={144} />
               </div>
             ) : (
-              <CrabRenderer crab={crab} size={144} animate showEmblem />
+              <CrabRenderer crab={crab} size={144} showEmblem />
             )}
             <button
               onClick={() => setUseProcedural((v) => !v)}

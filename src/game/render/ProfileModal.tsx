@@ -968,7 +968,7 @@ function ShowcaseSlot({
         className="mx-auto w-fit"
         style={{ filter: `drop-shadow(0 4px 10px ${f.colors.primary}88)` }}
       >
-        <CrabRenderer crab={crab} size={112} animate />
+        <CrabRenderer crab={crab} size={112} />
       </div>
       <div
         className="text-xs font-bold text-center truncate mt-1"
@@ -1111,7 +1111,6 @@ function ShowcaseView({
                     classId={c.classId}
                     faction={c.faction}
                     size={40}
-                    speed={0}
                   />
                   <span className="text-[9px] font-bold truncate w-full text-center text-white/85">
                     {c.name}
@@ -1370,7 +1369,7 @@ export default function ProfileModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       style={{ background: "rgba(2,12,28,0.78)", backdropFilter: "blur(8px)" }}
       onClick={onClose}
       role="dialog"

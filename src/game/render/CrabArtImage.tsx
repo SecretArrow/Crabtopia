@@ -9,10 +9,9 @@
 // static portrait again. The old transparent PNG portraits in
 // public/art/crabs/ remain on disk as source/poster art only.
 //
-// The public API is unchanged from the static era (including the
-// legacy `faction`/`speed` compat props): `speed` was already ignored
-// by the static renderer and is still not forwarded — previews always
-// play at the sheet's natural idle fps. prefers-reduced-motion still
+// The legacy `speed` compat prop was removed in Phase 4 — it claimed
+// a frozen render the component never produced. Previews always play
+// at the sheet's natural idle fps. prefers-reduced-motion still
 // freezes the first frame (AnimatedCrab honours it) — that is an
 // accessibility requirement, not a stiff render.
 
@@ -29,13 +28,10 @@ export interface ClassArtImageProps {
   size?: number;
   className?: string;
   /**
-   * Legacy-compat props accepted for drop-in replacement of the old
-   * static call sites. `faction` selects the sheet's faction tint
-   * (defaults to the class's home faction = its native look);
-   * `speed` is accepted and ignored — previews always animate.
+   * `faction` selects the sheet's faction tint (defaults to the
+   * class's home faction = its native look).
    */
   faction?: FactionId;
-  speed?: number;
 }
 
 export function ClassArtImage(props: ClassArtImageProps): React.ReactNode {

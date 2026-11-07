@@ -544,7 +544,7 @@ export default function CodexScreen() {
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(124,245,225,0.12)" }}
               >
                 <div className="font-bold text-sm mb-2 font-display flex items-center gap-1">
-                  <ClassArtImage classId={c.id} faction={CLASS_HOME_FACTION[c.id]} size={20} speed={0} />
+                  <ClassArtImage classId={c.id} faction={CLASS_HOME_FACTION[c.id]} size={20} />
                   {c.name} Breeds
                   <span className="ml-auto text-[10px] opacity-60 font-normal">
                     {visibleBreeds.length}/{breeds.length}
@@ -1030,7 +1030,6 @@ function AllBreedsGallery({
             classId={b.classId}
             faction={CLASS_HOME_FACTION[b.classId]}
             size={76}
-            speed={0}
           />
           {!isDiscovered && (
             <span className="absolute text-lg" aria-hidden>
