@@ -53,7 +53,7 @@ const REFRESH_COOLDOWN_MS = 30_000;
 
 export default function ArenaController() {
   const player = useGame((s) => s.player);
-  const addGold = useGame((s) => s.addGold);
+  const creditGold = useGame((s) => s.creditGold);
   const addXp = useGame((s) => s.addXp);
   const progressQuest = useGame((s) => s.progressQuest);
   const spendGold = useGame((s) => s.spendGold);
@@ -225,7 +225,7 @@ export default function ArenaController() {
       if (!player || !selectedOpponent) return;
       // Award rewards
       if (result.winner === "player") {
-        addGold(result.goldReward);
+        creditGold(result.goldReward);
         // XP is real: calculateRewards sizes it (enemy avg level × 15 per
         // surviving crab) and it feeds the Shellwarden level curve.
         addXp(result.xpReward);
@@ -273,7 +273,7 @@ export default function ArenaController() {
       setLastResult(result);
       setStep("result");
     },
-    [player, selectedOpponent, addGold, addXp, progressQuest, pushToast, setBattleLog, setInventory]
+    [player, selectedOpponent, creditGold, addXp, progressQuest, pushToast, setBattleLog, setInventory]
   );
 
   // ---- Result ----

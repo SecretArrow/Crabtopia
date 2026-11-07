@@ -122,7 +122,7 @@ interface BattleState {
 export default function ExplorationScreen() {
   const setScreen = useGame((s) => s.setScreen);
   const pushToast = useGame((s) => s.pushToast);
-  const addGold = useGame((s) => s.addGold);
+  const creditGold = useGame((s) => s.creditGold);
   const spendGold = useGame((s) => s.spendGold);
   const player = useGame((s) => s.player);
 
@@ -284,7 +284,7 @@ export default function ExplorationScreen() {
         });
       }
       const mats = chestMaterials(rng, matCount);
-      addGold(gold);
+      creditGold(gold);
       setInv((prev) => addMaterials(prev, mats));
       const matSummary = Object.entries(mats)
         .map(([mid, n]) => `${MATERIALS[mid as MaterialId].icon} ×${n}`)
@@ -396,7 +396,7 @@ export default function ExplorationScreen() {
             );
             const gold = randInt(80, 250, rng);
             const mats = chestMaterials(rng, randInt(1, 3, rng));
-            addGold(gold);
+            creditGold(gold);
             setInv((prev) => addMaterials(prev, mats));
             const matSummary = Object.entries(mats)
               .map(([mid, n]) => `${MATERIALS[mid as MaterialId].icon} ×${n}`)

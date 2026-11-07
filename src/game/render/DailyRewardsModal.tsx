@@ -1,6 +1,6 @@
 // Crabtopia - Daily Rewards modal ("Tidewell Rewards") — forgiving login streaks.
 // Self-contained Glow-Tide modal with gold accents. All streak/calendar data is
-// mocked locally; claims wire into the live game store (addGold / addXp / pushToast).
+// mocked locally; claims wire into the live game store (creditGold / addXp / pushToast).
 //
 // Mount example:
 //   import DailyRewardsModal from "../render/DailyRewardsModal";
@@ -247,7 +247,7 @@ function DayCard({
 
 export default function DailyRewardsModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player);
-  const addGold = useGame((s) => s.addGold);
+  const creditGold = useGame((s) => s.creditGold);
   const addXp = useGame((s) => s.addXp);
   const pushToast = useGame((s) => s.pushToast);
 
@@ -293,7 +293,9 @@ export default function DailyRewardsModal({ onClose }: { onClose: () => void }) 
 
   function handleClaim() {
     if (claimedToday) return;
-    addGold(todayReward.gold);
+    // Tidewell Rewards are PRIZES: the net is paid out of the Tide
+    // Treasury first (tax-funded), and only the shortfall is minted.
+    creditGold(todayReward.gold, { prize: true });
     if (todayReward.xp > 0) addXp(todayReward.xp);
     setLastClaimedDay(jakartaDayIndex(Date.now()));
     pushToast({

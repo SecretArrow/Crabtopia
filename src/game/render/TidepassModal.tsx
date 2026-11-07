@@ -1,6 +1,6 @@
 // Crabtopia - Tidepass (Seasonal Reward Track) Modal
 // Self-contained: all season data is mock-local; only uses gameStore for
-// gold/egg/cosmetic claim feedback via addGold + pushToast.
+// gold/egg/cosmetic claim feedback via creditGold + pushToast.
 // Supporter lane is real-money cosmetic only — never GOLD, never combat power.
 "use client";
 
@@ -264,7 +264,7 @@ export function TidepassModal({ onClose }: { onClose: () => void }) {
   const [showXpSources, setShowXpSources] = useState<boolean>(false);
 
   // --- Store hooks (claim flow only) ---
-  const addGold = useGame((s) => s.addGold);
+  const creditGold = useGame((s) => s.creditGold);
   const pushToast = useGame((s) => s.pushToast);
 
   const xpPct = Math.min(100, (seasonXp / seasonXpMax) * 100);
@@ -290,7 +290,7 @@ export function TidepassModal({ onClose }: { onClose: () => void }) {
     if (tier > currentTier) return; // tier not unlocked yet
     setClaimedFree((prev) => new Set(prev).add(tier));
     if (r.kind === "gold" && r.gold) {
-      addGold(r.gold);
+      creditGold(r.gold);
       pushToast({
         title: `+${formatGold(r.gold)} GOLD`,
         description: r.name,

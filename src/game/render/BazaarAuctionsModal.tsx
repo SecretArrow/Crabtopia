@@ -255,7 +255,10 @@ function ItemThumbnail({ auction, size = 64 }: { auction: Auction; size?: number
 export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player);
   const spendGold = useGame((s) => s.spendGold);
-  const addGold = useGame((s) => s.addGold);
+  // Escrow refunds are the player's OWN gold coming back: they route
+  // through refundGold (tokenomics-exempt — never tithed, never counted
+  // as minted), not the faucet/admin credit paths.
+  const refundGold = useGame((s) => s.refundGold);
   const pushToast = useGame((s) => s.pushToast);
 
   const [tab, setTab] = useState<Tab>("auctions");
@@ -308,10 +311,10 @@ export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     playerBidsRef.current = playerBids;
   }, [playerBids]);
-  const addGoldRef = useRef(addGold);
+  const addGoldRef = useRef(refundGold);
   useEffect(() => {
-    addGoldRef.current = addGold;
-  }, [addGold]);
+    addGoldRef.current = refundGold;
+  }, [refundGold]);
   const mockAuctionsRef = useRef(mockAuctions);
   useEffect(() => {
     mockAuctionsRef.current = mockAuctions;

@@ -356,7 +356,7 @@ function buildMembers(leaderName: string, playerName: string, playerLevel: numbe
 export default function ClansModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player);
   const spendGold = useGame((s) => s.spendGold);
-  const addGold = useGame((s) => s.addGold);
+  const creditGold = useGame((s) => s.creditGold);
   const pushToast = useGame((s) => s.pushToast);
 
   // View state
@@ -541,7 +541,7 @@ export default function ClansModal({ onClose }: { onClose: () => void }) {
     // disabled button used to be the only gate.
     if (tierIdx > currentTierIdx) return;
     const tier = CHEST_TIERS[tierIdx];
-    addGold(tier.reward);
+    creditGold(tier.reward);
     setClaimedByClan((prev) => ({
       ...prev,
       [myClanId]: [...(prev[myClanId] ?? []), tierIdx],

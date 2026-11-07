@@ -426,7 +426,7 @@ function RewardCard({
 
 export default function LeviathanRaidModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player)!;
-  const addGold = useGame((s) => s.addGold);
+  const creditGold = useGame((s) => s.creditGold);
   const addXp = useGame((s) => s.addXp);
   const progressQuest = useGame((s) => s.progressQuest);
   const pushToast = useGame((s) => s.pushToast);
@@ -504,7 +504,7 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
     if (rewardsClaimedRef.current) return;
     if (raidState === "victory") {
       rewardsClaimedRef.current = true;
-      addGold(5000);
+      creditGold(5000);
       addXp(1000);
       // Stalwart Defender quest: repelling the Leviathan IS the raid
       // defense fantasy (NPC raids on player sites don't exist).
@@ -516,14 +516,14 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
       });
     } else if (raidState === "defeat") {
       rewardsClaimedRef.current = true;
-      addGold(100);
+      creditGold(100);
       pushToast({
         title: "Consolation: 100 GOLD",
         description: "The tide returns what the Leviathan took.",
         variant: "warning",
       });
     }
-  }, [raidState, addGold, addXp, progressQuest, pushToast]);
+  }, [raidState, creditGold, addXp, progressQuest, pushToast]);
 
   // ----- JOIN RAID -----
   const handleJoinRaid = () => {

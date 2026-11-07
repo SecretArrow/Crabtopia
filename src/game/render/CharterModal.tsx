@@ -220,7 +220,7 @@ export default function CharterModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player);
   const pushToast = useGame((s) => s.pushToast);
   const spendGold = useGame((s) => s.spendGold);
-  const addGold = useGame((s) => s.addGold);
+  const creditGold = useGame((s) => s.creditGold);
 
   const [view, setView] = useState<View>("browse");
   const [mockOpenCharters, setMockOpenCharters] = useState<CharterOffer[]>(MOCK_OPEN_CHARTERS);
@@ -364,7 +364,7 @@ export default function CharterModal({ onClose }: { onClose: () => void }) {
     const c = myActiveCharters.find((x) => x.id === id);
     if (!c) return;
     const amount = c.role === "renter" ? c.earningsToRenter : c.earningsToOwner;
-    if (amount > 0) addGold(amount);
+    if (amount > 0) creditGold(amount);
     closeCharter(id);
     setMyActiveCharters((prev) => prev.filter((x) => x.id !== id));
     setSettleCharterId(null);
