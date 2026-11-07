@@ -872,6 +872,20 @@ export default function ArenaBattle({
         }
         case "statusExpired":
           return;
+        case "dazed": {
+          // Thawed from a freeze but dizzy: it will fumble its next
+          // offensive action starts (sim-enforced, purely cosmetic here).
+          const target = unit(ev.targetId);
+          if (!target) return;
+          spawnFloatingText("😵 Dizzy!", unitPosPx(target), "#C4B5FD");
+          return;
+        }
+        case "actionFumbled": {
+          const actor = unit(ev.actorId);
+          if (!actor) return;
+          spawnFloatingText("😵 Fumbled!", unitPosPx(actor), "#C4B5FD");
+          return;
+        }
         case "death": {
           const target = unit(ev.targetId);
           tombstoneAtRef.current[ev.targetId] =

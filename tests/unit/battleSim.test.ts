@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { initBattle } from "../../src/game/engine/arenaEngine";
 import {
+  applyHardCc,
   createSim,
   stepSim,
   runSimToCompletion,
@@ -308,6 +309,125 @@ describe("battleSim — death semantics", () => {
         e.targetId === victim.id,
     );
     expect(hitsAfterDeath).toHaveLength(0);
+  });
+});
+
+describe("battleSim — dazed (post-freeze common sense)", () => {
+  // A level-1 victim frozen by a level-50 source: tenacity clamps to
+  // 0, so the manual freeze always lands for its full 2000ms. The
+  // dummy target is harmless (attack 1) and unkillable.
+  function dazedScenario(seed = 99): {
+    sim: SimState;
+    victim: Crab;
+  } {
+    const victim = mk("reaver", 61, 1);
+    const freezer = mk("warden", 62, 50, { attack: 5 });
+    const dummy = mk("bulwark", 63, 1, { hp: 100000, attack: 1 });
+    const sim = simOf([victim, freezer], [dummy], seed, {
+      [victim.id]: { x: 48, y: 50 },
+      [freezer.id]: { x: 20, y: 50 },
+      [dummy.id]: { x: 58, y: 50 },
+    });
+    const applied = applyHardCc(
+      sim,
+      unit(sim, freezer.id),
+      unit(sim, victim.id),
+    );
+    expect(applied).toBe("applied");
+    return { sim, victim };
+  }
+
+  it("a naturally-thawed crab fumbles its next 1–2 offensive starts, then attacks", () => {
+    const runOnce = () => {
+      const { sim, victim } = dazedScenario();
+      let struckAfterFumble = false;
+      for (let t = 0; t < 45000 && !struckAfterFumble; t += 50) {
+        stepSim(sim, 50);
+        const fumbles = sim.events.filter(
+          (e) => e.type === "actionFumbled" && e.actorId === victim.id,
+        );
+        if (
+          fumbles.length > 0 &&
+          sim.events.some(
+            (e) =>
+              e.type === "strike" &&
+              e.actorId === victim.id &&
+              e.at > fumbles[fumbles.length - 1].at,
+          )
+        ) {
+          struckAfterFumble = true;
+        }
+      }
+      return { sim, victim, struckAfterFumble };
+    };
+
+    const a = runOnce();
+    const dazed = a.sim.events.filter(
+      (e): e is Extract<SimEvent, { type: "dazed" }> =>
+        e.type === "dazed" && e.targetId === a.victim.id,
+    );
+    expect(dazed).toHaveLength(1);
+    expect(dazed[0].actions).toBeGreaterThanOrEqual(1);
+    expect(dazed[0].actions).toBeLessThanOrEqual(2);
+    const fumbles = a.sim.events.filter(
+      (e) => e.type === "actionFumbled" && e.actorId === a.victim.id,
+    );
+    // Every dazed action is spent on exactly one fumbled start —
+    // no more, no fewer — and a real attack lands afterwards.
+    expect(fumbles).toHaveLength(dazed[0].actions);
+    expect(a.struckAfterFumble).toBe(true);
+    // The fumble spent nothing: the successful strike proves energy
+    // and cooldowns were left intact enough to act immediately after
+    // the short hesitation.
+
+    // Determinism: the identical scenario replays event-for-event,
+    // dazed rolls included (same seeded stream, fixed tick order).
+    const b = runOnce();
+    expect(hashSimEvents(b.sim.events)).toBe(hashSimEvents(a.sim.events));
+    expect(
+      b.sim.events.filter((e) => e.type === "actionFumbled"),
+    ).toHaveLength(fumbles.length);
+  });
+
+  it("a cleansed crab never goes dizzy and loses zero actions", () => {
+    const victim = mk("reaver", 71, 1);
+    const mender = mk("shellmender", 72, 10);
+    // Level-50 source ⇒ tenacity 0 ⇒ the freeze always lands; its
+    // attack is 1 so it can never kill anyone during the window.
+    const dummy = mk("bulwark", 73, 50, { hp: 100000, attack: 1 });
+    const sim = simOf([victim, mender], [dummy], 7, {
+      [victim.id]: { x: 45, y: 50 },
+      [mender.id]: { x: 35, y: 50 },
+      [dummy.id]: { x: 70, y: 50 },
+    });
+    expect(
+      applyHardCc(sim, unit(sim, dummy.id), unit(sim, victim.id)),
+    ).toBe("applied");
+    stepSim(sim, 30000);
+    const cleanses = sim.events.filter(
+      (e) =>
+        e.type === "cleansed" &&
+        e.targetId === victim.id &&
+        e.removed === "freeze",
+    );
+    expect(cleanses.length).toBeGreaterThanOrEqual(1);
+    expect(
+      sim.events.some(
+        (e) => e.type === "dazed" && e.targetId === victim.id,
+      ),
+    ).toBe(false);
+    expect(
+      sim.events.some(
+        (e) => e.type === "actionFumbled" && e.actorId === victim.id,
+      ),
+    ).toBe(false);
+    expect(unit(sim, victim.id).dazedActions).toBe(0);
+    // And the victim fights normally afterwards.
+    expect(
+      sim.events.some(
+        (e) => e.type === "strike" && e.actorId === victim.id,
+      ),
+    ).toBe(true);
   });
 });
 

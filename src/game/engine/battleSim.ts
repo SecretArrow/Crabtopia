@@ -74,6 +74,8 @@ export const CC_IMMUNITY_MS = 5000;
 export const CC_UPTIME_CAP_MS = 4000; // 40% of the 10000ms window
 export const CLEANSE_IMMUNITY_MS = 1500;
 export const SLOW_MAGNITUDE = 0.4;
+/** Hesitation after a daze fumbles an offensive action start. */
+export const DAZED_HESITATION_MS = 700;
 
 const PROJECTILE_SPEED = 55; // field % per second
 const ENERGY_PER_MS = 2 / ROUND_MS;
@@ -167,6 +169,14 @@ export interface SimUnit {
   ccApplications: number[];
   ccIntervals: { start: number; end: number }[];
   ccImmuneUntil: number;
+  /**
+   * Post-freeze dizziness (common-sense logic): offensive action
+   * starts this unit will still fumble after thawing from a freeze
+   * that expired NATURALLY (1–2, rolled from the seeded stream at
+   * expiry). A cleanse instead clears the head — no daze, and any
+   * pending daze is wiped. Sim-internal only; not a status effect.
+   */
+  dazedActions: number;
   deathAt: number | null;
 }
 
@@ -195,6 +205,8 @@ export type SimEvent =
   | { type: "statusApplied"; at: number; actorId: string; targetId: string; status: StatusEffectId; durationMs: number }
   | { type: "statusResisted"; at: number; actorId: string; targetId: string; convertedFrom: "freeze"; reason: "tenacity" | "dr" | "immune" | "uptime" }
   | { type: "statusExpired"; at: number; targetId: string; status: StatusEffectId }
+  | { type: "dazed"; at: number; targetId: string; actions: number }
+  | { type: "actionFumbled"; at: number; actorId: string; skillId: string; reason: "dazed"; remaining: number }
   | { type: "cleansed"; at: number; actorId: string; targetId: string; removed: StatusEffectId | null }
   | { type: "death"; at: number; targetId: string; x: number; y: number }
   | { type: "victory"; at: number; winner: "player" | "enemy" };
@@ -279,6 +291,7 @@ export function createSim(
       ccApplications: [],
       ccIntervals: [],
       ccImmuneUntil: 0,
+      dazedActions: 0,
       deathAt: null,
     };
     units.push(u);
@@ -589,6 +602,10 @@ export function cleanseTarget(
     removed = newest.id;
     target.c.statuses = target.c.statuses.filter((s) => s.id !== newest.id);
   }
+  // A cleanse clears the head as well as the body: a freeze removed
+  // this way never thaws into dizziness, and any daze the target was
+  // already carrying is wiped.
+  target.dazedActions = 0;
   target.ccImmuneUntil = Math.max(target.ccImmuneUntil, now + CLEANSE_IMMUNITY_MS);
   if (removed !== null) {
     sim.events.push({
@@ -1424,6 +1441,20 @@ function tickStatuses(sim: SimState, unit: SimUnit): void {
           status: s.id,
         });
       }
+      if (s.id === "freeze") {
+        // Thawing naturally leaves the crab dizzy: it will fumble
+        // its next 1–2 offensive action starts (common-sense logic —
+        // a cleanse, by contrast, clears the head with no daze).
+        // The count roll draws from the battle's seeded stream here,
+        // in fixed per-tick unit order, so Skip ≡ watched holds.
+        unit.dazedActions = 1 + (drawBattleRandom(sim.battle) < 0.5 ? 1 : 0);
+        sim.events.push({
+          type: "dazed",
+          at: now,
+          targetId: c.crabId,
+          actions: unit.dazedActions,
+        });
+      }
       continue;
     }
     kept.push(next);
@@ -1536,6 +1567,32 @@ function tickUnit(sim: SimState, unit: SimUnit): void {
         unit.intent.skill.targetType !== "all_enemies" &&
         (!primary || primary.c.isDefeated);
       if (!targetGone && skillReady(sim, unit, unit.intent.skill) && inBandForAction(sim, unit, unit.intent)) {
+        // DAZE (common-sense logic): a crab still dizzy from a
+        // naturally-expired freeze fumbles OFFENSIVE action starts —
+        // it hesitates, loses the action, but spends no energy and
+        // triggers no cooldown (nothing was actually attempted).
+        // Support / heal / self actions are never fumbled: the rule
+        // is about attacking ("takkan menyerang").
+        const skill = unit.intent.skill;
+        if (
+          unit.dazedActions > 0 &&
+          (skill.targetType === "enemy" || skill.targetType === "all_enemies")
+        ) {
+          unit.dazedActions -= 1;
+          sim.events.push({
+            type: "actionFumbled",
+            at: now,
+            actorId: c.crabId,
+            skillId: skill.id,
+            reason: "dazed",
+            remaining: unit.dazedActions,
+          });
+          unit.intent = null;
+          unit.targetId = null;
+          unit.recoverUntil = now + DAZED_HESITATION_MS;
+          unit.state = "hitstun"; // stagger look for this tick
+          return; // no movement on a fumbled start either
+        }
         startAction(sim, unit, unit.intent);
         return; // no movement on the tick an action starts
       }
