@@ -255,6 +255,7 @@ function ItemThumbnail({ auction, size = 64 }: { auction: Auction; size?: number
 export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player);
   const spendGold = useGame((s) => s.spendGold);
+  const addGold = useGame((s) => s.addGold);
   const pushToast = useGame((s) => s.pushToast);
 
   const [tab, setTab] = useState<Tab>("auctions");
@@ -297,30 +298,77 @@ export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
     pushToastRef.current = pushToast;
   }, [pushToast]);
 
+  // ---- Bid escrow -------------------------------------------------------
+  // playerBids[auctionId] is gold the player has actually paid toward a
+  // bid. It used to be a one-way sink: raising a bid charged the FULL new
+  // amount again, being outbid never refunded, and closing the modal
+  // forfeited everything. Escrow is now refunded on outbid, on
+  // Buy-It-Now, and on modal close; raising a bid charges only the delta.
+  const playerBidsRef = useRef(playerBids);
+  useEffect(() => {
+    playerBidsRef.current = playerBids;
+  }, [playerBids]);
+  const addGoldRef = useRef(addGold);
+  useEffect(() => {
+    addGoldRef.current = addGold;
+  }, [addGold]);
+  const mockAuctionsRef = useRef(mockAuctions);
+  useEffect(() => {
+    mockAuctionsRef.current = mockAuctions;
+  }, [mockAuctions]);
+
+  const refundEscrow = (auctionId: string) => {
+    const held = playerBidsRef.current[auctionId];
+    if (!held) return;
+    addGoldRef.current(held);
+    playerBidsRef.current = { ...playerBidsRef.current };
+    delete playerBidsRef.current[auctionId];
+    setPlayerBids((prev) => {
+      const next = { ...prev };
+      delete next[auctionId];
+      return next;
+    });
+  };
+  const refundEscrowRef = useRef(refundEscrow);
+  refundEscrowRef.current = refundEscrow;
+
+  // Closing the modal refunds every outstanding escrow.
+  useEffect(() => {
+    return () => {
+      for (const [auctionId, amount] of Object.entries(playerBidsRef.current)) {
+        if (amount > 0) addGoldRef.current(amount);
+      }
+      playerBidsRef.current = {};
+    };
+  }, []);
+
   // Outbid simulation: occasionally bump a random auction the player is leading.
   useEffect(() => {
     const id = setInterval(() => {
       if (Math.random() > 0.35) return;
-      setMockAuctions((prev) => {
-        const candidates = prev.filter(
-          (a) =>
-            a.topBidder === playerNameRef.current &&
-            a.endsAt > Date.now() &&
-            a.bidCount > 0
-        );
-        if (candidates.length === 0) return prev;
-        const target = candidates[Math.floor(Math.random() * candidates.length)];
-        const newBidder =
-          NPC_BIDDER_NAMES[Math.floor(Math.random() * NPC_BIDDER_NAMES.length)];
-        const bump = nextBidStep(target.currentBid);
-        const newBid = target.minNextBid + Math.floor(Math.random() * 3) * bump;
-        const newMinNext = newBid + nextBidStep(newBid);
-        pushToastRef.current({
-          title: `You've been outbid on ${target.itemName}!`,
-          description: `New top bid ${formatGold(newBid)} GOLD by ${newBidder}.`,
-          variant: "warning",
-        });
-        return prev.map((a) =>
+      const prev = mockAuctionsRef.current;
+      const candidates = prev.filter(
+        (a) =>
+          a.topBidder === playerNameRef.current &&
+          a.endsAt > Date.now() &&
+          a.bidCount > 0
+      );
+      if (candidates.length === 0) return;
+      const target = candidates[Math.floor(Math.random() * candidates.length)];
+      const newBidder =
+        NPC_BIDDER_NAMES[Math.floor(Math.random() * NPC_BIDDER_NAMES.length)];
+      const bump = nextBidStep(target.currentBid);
+      const newBid = target.minNextBid + Math.floor(Math.random() * 3) * bump;
+      const newMinNext = newBid + nextBidStep(newBid);
+      // Outbid: the player's escrowed bid comes straight back.
+      refundEscrowRef.current(target.id);
+      pushToastRef.current({
+        title: `You've been outbid on ${target.itemName}!`,
+        description: `New top bid ${formatGold(newBid)} GOLD by ${newBidder}. Your escrow was refunded.`,
+        variant: "warning",
+      });
+      setMockAuctions((current) =>
+        current.map((a) =>
           a.id === target.id
             ? {
                 ...a,
@@ -330,8 +378,8 @@ export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
                 bidCount: a.bidCount + 1,
               }
             : a
-        );
-      });
+        )
+      );
     }, 22000);
     return () => clearInterval(id);
   }, []);
@@ -381,14 +429,20 @@ export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
       });
       return;
     }
-    if (p.gold < bid) {
+    // Escrow: gold already held toward this auction counts toward the
+    // new bid — raising your own bid charges only the difference.
+    const held = playerBids[auction.id] ?? 0;
+    const delta = bid - held;
+    if (p.gold < delta) {
       pushToast({ title: "Not enough GOLD.", variant: "error" });
       return;
     }
-    const ok = spendGold(bid);
-    if (!ok) {
-      pushToast({ title: "Could not place bid.", variant: "error" });
-      return;
+    if (delta > 0) {
+      const ok = spendGold(delta);
+      if (!ok) {
+        pushToast({ title: "Could not place bid.", variant: "error" });
+        return;
+      }
     }
     const newMinNext = bid + nextBidStep(bid);
     setMockAuctions((prev) =>
@@ -413,10 +467,14 @@ export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
     }
     const bin = auction.buyItNow;
     if (bin == null) return;
-    if (p.gold < bin) {
+    // Escrow held on this auction counts toward the purchase price; it
+    // is released (refunded) as part of buying, never forfeited.
+    const held = playerBids[auction.id] ?? 0;
+    if (p.gold + held < bin) {
       pushToast({ title: "Not enough GOLD.", variant: "error" });
       return;
     }
+    refundEscrow(auction.id);
     const ok = spendGold(bin);
     if (!ok) {
       pushToast({ title: "Purchase failed.", variant: "error" });

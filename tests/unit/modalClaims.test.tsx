@@ -167,13 +167,14 @@ describe("BazaarAuctionsModal escrow", () => {
   it("being outbid refunds the escrow immediately", () => {
     setupPlayer(100000, 10);
     const g0 = gold();
+    // Fake timers BEFORE mount so the outbid interval is driven by them.
+    vi.useFakeTimers();
     render(<BazaarAuctionsModal onClose={noop} />);
     const card = cardWith("Kelpback's Bulwark", /Place Bid/);
     fireEvent.click(within(card).getByRole("button", { name: "Place Bid" }));
     expect(gold()).toBe(g0 - 380);
 
     // Drive the outbid simulation deterministically.
-    vi.useFakeTimers();
     const rand = vi.spyOn(Math, "random").mockReturnValue(0);
     vi.advanceTimersByTime(22000);
     rand.mockRestore();
