@@ -22,6 +22,8 @@ import {
 } from "./ui";
 import CrabRenderer from "./CrabRenderer";
 import ElementBadge from "./ElementBadge";
+import StaminaBar from "./StaminaBar";
+import { useGame } from "../store/gameStore";
 import { RARITY_COLORS, getGeneVariant, BODY_PART_SLOTS } from "../content/bodyparts";
 import CrabDetailModal from "./CrabDetailModal";
 
@@ -47,6 +49,9 @@ export default function CrabCard({
   const breed = BREEDS_BY_ID[crab.breedId];
   const bp = crabBaseBP(crab);
   const [showDetail, setShowDetail] = useState(false);
+  // Second Wind boost (for the stamina projection) — the crab prop
+  // itself carries stamina/wound state.
+  const boostUntil = useGame((s) => s.player?.recoveryBoostUntil ?? 0);
 
   // dominant rarity
   let topRarity: "common" | "uncommon" | "rare" | "epic" | "legendary" = "common";
@@ -144,6 +149,11 @@ export default function CrabCard({
           </div>
           <div className="mb-1">
             <ElementBadge crab={crab} />
+          </div>
+
+          {/* Stamina + wound state (engine/stamina.ts) */}
+          <div className="mb-1.5">
+            <StaminaBar crab={crab} boostUntil={boostUntil} compact={compact} />
           </div>
 
           {showStats && (

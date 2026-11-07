@@ -36,7 +36,7 @@ import {
   leviathanWinAmount,
   leviathanWinsTodayOf,
 } from "../engine/economy";
-import { LEVIATHAN_WIN_GOLD } from "../engine/config";
+import { LEVIATHAN_WIN_GOLD, STAMINA_COSTS } from "../engine/config";
 
 // ============================ TYPES ============================
 
@@ -435,6 +435,8 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
   const claimLeviathanWin = useGame((s) => s.claimLeviathanWin);
   const addXp = useGame((s) => s.addXp);
   const progressQuest = useGame((s) => s.progressQuest);
+  const chargeStamina = useGame((s) => s.chargeStamina);
+  const woundCrabs = useGame((s) => s.woundCrabs);
   const pushToast = useGame((s) => s.pushToast);
 
   const reducedMotion = usePrefersReducedMotion();
@@ -485,9 +487,12 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
   const selectedTeamAvailability = useMemo(
     () =>
       selectedTeam
-        ? teamAvailability(selectedTeam, crabsById)
+        ? teamAvailability(selectedTeam, crabsById, {
+            staminaCost: STAMINA_COSTS.leviathan,
+            recoveryBoostUntil: player.recoveryBoostUntil ?? 0,
+          })
         : { available: false, reasons: ["No team selected"], filledCount: 0 },
-    [selectedTeam, crabsById]
+    [selectedTeam, crabsById, player.recoveryBoostUntil]
   );
 
   const playerSquad = useMemo(() => {
@@ -510,6 +515,8 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
 
   // ----- REWARD EFFECT (claim once on terminal state) -----
   const rewardsClaimedRef = useRef(false);
+  // Guards the one-shot wound application when the squad falls.
+  const woundsAppliedRef = useRef(false);
   useEffect(() => {
     if (rewardsClaimedRef.current) return;
     if (raidState === "victory") {
@@ -555,6 +562,17 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
   const handleJoinRaid = () => {
     if (!selectedTeamAvailability.available) return;
     if (playerSquad.length !== 5) return;
+    // Stamina: the squad pays STAMINA_COSTS.leviathan per crab at the
+    // start (atomic; the action toasts any refusal reason).
+    if (
+      !chargeStamina(
+        playerSquad.map((c) => c.id),
+        STAMINA_COSTS.leviathan
+      )
+    ) {
+      return;
+    }
+    woundsAppliedRef.current = false;
 
     const npcMembers: RaidMember[] = npcSquads.map((s, i) => {
       const bp = squadBP(s.crabs);
@@ -785,6 +803,16 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
   const hpRatio = bossHP / BOSS_MAX_HP;
   const playerMember = raidMembers[0];
   const playerDefeated = playerMember?.defeated === true;
+
+  // WOUNDS: the Leviathan fight is squad-based — when the player's
+  // squad is knocked out (its HP pool hit 0), the whole squad is
+  // Wounded for 45 minutes. Applied once per raid (store action
+  // toasts the names).
+  useEffect(() => {
+    if (!playerDefeated || woundsAppliedRef.current) return;
+    woundsAppliedRef.current = true;
+    woundCrabs(playerSquad.map((c) => c.id));
+  }, [playerDefeated, playerSquad, woundCrabs]);
   const rankedMembers = [...raidMembers].sort(
     (a, b) => b.contributionDamage - a.contributionDamage
   );

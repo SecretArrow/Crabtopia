@@ -25,18 +25,19 @@ import {
   type RecipeDef,
 } from "../../data/materials";
 import {
-  INV_KEY,
-  DEFAULT_INVENTORY,
   MINING_KEY,
   DEFAULT_MINING,
   BUFFS_KEY,
   DEFAULT_BUFFS,
   MAX_MINING_ENERGY,
-  consumeItem,
-  type InventoryState,
   type MiningState,
   type BuffsState,
 } from "../useLocalStorage";
+import {
+  RECOVERY_ITEM_LIST,
+  type RecoveryItemDef,
+} from "../../engine/stamina";
+import StaminaBar from "../StaminaBar";
 import type { Crab, CrabStats } from "../../types";
 
 type Tab = "materials" | "items";
@@ -45,11 +46,15 @@ export default function InventoryScreen() {
   const setScreen = useGame((s) => s.setScreen);
   const pushToast = useGame((s) => s.pushToast);
   const player = useGame((s) => s.player);
+  const consumeItemCount = useGame((s) => s.consumeItemCount);
+  const useRecoveryItem = useGame((s) => s.useRecoveryItem);
 
-  const [inv, setInv] = useLocalStorage<InventoryState>(
-    INV_KEY,
-    DEFAULT_INVENTORY
-  );
+  // Materials + items live in the player profile (the Bazaar item
+  // market escrows against the same stock).
+  const inv = {
+    materials: player?.materials ?? {},
+    items: player?.items ?? {},
+  };
   const [mining, setMining] = useLocalStorage<MiningState>(
     MINING_KEY,
     DEFAULT_MINING
@@ -61,8 +66,31 @@ export default function InventoryScreen() {
 
   const [tab, setTab] = useState<Tab>("materials");
   const [pickerFor, setPickerFor] = useState<RecipeDef | null>(null);
+  const [recoveryPickerFor, setRecoveryPickerFor] =
+    useState<RecoveryItemDef | null>(null);
 
   const crabs = player?.crabs ?? [];
+
+  function handleUseRecovery(def: RecoveryItemDef) {
+    const count = inv.items[def.id] ?? 0;
+    if (count <= 0) {
+      pushToast({
+        title: `You have no ${def.name}.`,
+        description: "Stock up at the Bazaar's Items & Supplies shelf.",
+        variant: "error",
+      });
+      return;
+    }
+    if (def.needsTarget) {
+      if (crabs.length === 0) {
+        pushToast({ title: "You have no crabs.", variant: "error" });
+        return;
+      }
+      setRecoveryPickerFor(def);
+      return;
+    }
+    useRecoveryItem(def.id);
+  }
 
   function applyItemToCrab(recipe: RecipeDef, crab: Crab) {
     if (recipe.effect.type !== "stat_buff") return;
@@ -80,7 +108,7 @@ export default function InventoryScreen() {
         player: { ...s.player, crabs: crabsList },
       } as Partial<typeof s>;
     });
-    setInv((prev) => consumeItem(prev, recipe.id, 1));
+    consumeItemCount(recipe.id, 1);
     pushToast({
       title: `${recipe.name} applied to ${crab.name}!`,
       description: `+${percent}% ${stat.toUpperCase()} permanently.`,
@@ -98,7 +126,7 @@ export default function InventoryScreen() {
         ...prev,
         energy: Math.min(MAX_MINING_ENERGY, prev.energy + e.amount),
       }));
-      setInv((prev) => consumeItem(prev, recipe.id, 1));
+      consumeItemCount(recipe.id, 1);
       pushToast({
         title: `Quaffed ${recipe.name}!`,
         description: `+${e.amount} mining energy (${before} → ${restored}).`,
@@ -114,7 +142,7 @@ export default function InventoryScreen() {
           charges: e.charges,
         },
       }));
-      setInv((prev) => consumeItem(prev, recipe.id, 1));
+      consumeItemCount(recipe.id, 1);
       pushToast({
         title: `${recipe.name} armed!`,
         description: `+1 bonus material from each of the next ${e.charges} treasure chests.`,
@@ -130,7 +158,7 @@ export default function InventoryScreen() {
           charges: e.charges,
         },
       }));
-      setInv((prev) => consumeItem(prev, recipe.id, 1));
+      consumeItemCount(recipe.id, 1);
       pushToast({
         title: `${recipe.name} primed!`,
         description: `+${e.percent}% legendary chance for next breed.`,
@@ -211,9 +239,21 @@ export default function InventoryScreen() {
                 🪤 -20% HP next battle
               </span>
             ) : null}
+            {player?.recoveryBoostUntil &&
+            player.recoveryBoostUntil > Date.now() ? (
+              <span style={{ color: "#FFD166" }}>
+                🕯️ Recovery ×3 (
+                {Math.ceil((player.recoveryBoostUntil - Date.now()) / 60000)}m
+                left)
+              </span>
+            ) : null}
             {!buffs.dropRate &&
             !buffs.legendaryChance &&
-            !buffs.trapDebuff ? (
+            !buffs.trapDebuff &&
+            !(
+              player?.recoveryBoostUntil &&
+              player.recoveryBoostUntil > Date.now()
+            ) ? (
               <span className="text-white/40">None</span>
             ) : null}
           </div>
@@ -273,6 +313,7 @@ export default function InventoryScreen() {
             })}
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {RECIPE_LIST.map((recipe) => {
               const count = inv.items[recipe.id] ?? 0;
@@ -319,6 +360,45 @@ export default function InventoryScreen() {
               );
             })}
           </div>
+
+          {/* Recovery supplies (Bazaar Supplies shelf stock) */}
+          <div className="mt-4 mb-2 text-xs font-bold uppercase tracking-wide text-white/60">
+            🩹 Recovery Supplies
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            {RECOVERY_ITEM_LIST.map((def) => {
+              const count = inv.items[def.id] ?? 0;
+              return (
+                <GlassPanel key={def.id} className="p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="text-3xl">{def.icon}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold">{def.name}</div>
+                      <div className="text-[10px] leading-snug text-white/55">
+                        {def.description}
+                      </div>
+                    </div>
+                    <div
+                      className="text-sm font-bold font-display"
+                      style={{ color: "#7CF5E1" }}
+                    >
+                      ×{count}
+                    </div>
+                  </div>
+                  <GlowButton
+                    variant={count > 0 ? "gold" : "ghost"}
+                    size="sm"
+                    className="mt-2 w-full"
+                    disabled={count <= 0}
+                    onClick={() => handleUseRecovery(def)}
+                  >
+                    {count > 0 ? "Use" : "None — Bazaar ▸ Items & Supplies"}
+                  </GlowButton>
+                </GlassPanel>
+              );
+            })}
+          </div>
+          </>
         )}
       </div>
 
@@ -393,6 +473,73 @@ export default function InventoryScreen() {
                     })}
                   </div>
                 )}
+              </div>
+            </GlassPanel>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Recovery item crab picker */}
+      <AnimatePresence>
+        {recoveryPickerFor && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-3"
+            style={{ background: "rgba(6,18,43,0.88)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setRecoveryPickerFor(null)}
+          >
+            <GlassPanel
+              className="w-full max-w-md p-4"
+              glow="rgba(255,209,102,0.3)"
+            >
+              <div onClick={(e) => e.stopPropagation()}>
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="text-sm font-bold">
+                    Use {recoveryPickerFor.icon} {recoveryPickerFor.name} on...
+                  </div>
+                  <GlowButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setRecoveryPickerFor(null)}
+                  >
+                    ✕
+                  </GlowButton>
+                </div>
+                <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+                  {crabs.map((crab) => (
+                    <button
+                      key={crab.id}
+                      onClick={() => {
+                        if (useRecoveryItem(recoveryPickerFor.id, crab.id)) {
+                          setRecoveryPickerFor(null);
+                        }
+                      }}
+                      className="flex flex-col items-center rounded-xl p-1.5 transition-all hover:-translate-y-0.5"
+                      style={{
+                        background: "rgba(10,27,61,0.55)",
+                        border: "1px solid rgba(124,245,225,0.18)",
+                      }}
+                    >
+                      <CrabSprite crab={crab} size={56} />
+                      <div className="mt-0.5 w-full truncate text-center text-[9px] font-bold">
+                        {crab.name}
+                      </div>
+                      <div className="w-full px-0.5">
+                        <StaminaBar
+                          crab={crab}
+                          boostUntil={player?.recoveryBoostUntil ?? 0}
+                          compact
+                        />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 text-[10px] text-white/50">
+                  A refused use (full stamina, no wound) never consumes the
+                  item.
+                </div>
               </div>
             </GlassPanel>
           </motion.div>

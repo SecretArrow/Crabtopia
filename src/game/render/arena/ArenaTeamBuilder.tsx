@@ -40,6 +40,7 @@ import {
   firstAvailableTeam,
   teamAvailability,
 } from "../../engine/teamEligibility";
+import { STAMINA_COSTS } from "../../engine/config";
 import { teamStatsSummary } from "../../engine/teams";
 import {
   columnX,
@@ -140,7 +141,10 @@ export default function ArenaTeamBuilder({
   );
 
   const availability = selectedTeam
-    ? teamAvailability(selectedTeam, crabsById)
+    ? teamAvailability(selectedTeam, crabsById, {
+        staminaCost: STAMINA_COSTS.arena,
+        recoveryBoostUntil: player?.recoveryBoostUntil ?? 0,
+      })
     : { available: false, reasons: ["No team selected"], filledCount: 0 };
 
   const teamCrabs = useMemo(
@@ -719,6 +723,7 @@ export default function ArenaTeamBuilder({
             selectedTeamId={selectedTeamId}
             onSelect={handleSelectTeam}
             requireIdle={true}
+            staminaCost={STAMINA_COSTS.arena}
             testIdPrefix="arena-team-select"
           />
         </section>

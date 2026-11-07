@@ -11,6 +11,7 @@ import { useGame } from "../store/gameStore";
 import { FACTIONS } from "../content/factions";
 import { Crab, Team, FactionId, ClassId } from "../types";
 import TeamSelect from "./TeamSelect";
+import { STAMINA_COSTS } from "../engine/config";
 import {
   firstAvailableTeam,
   teamAvailability,
@@ -777,6 +778,7 @@ export default function TournamentModal({
 }) {
   const player = useGame((s) => s.player);
   const pushToast = useGame((s) => s.pushToast);
+  const chargeStamina = useGame((s) => s.chargeStamina);
 
   const [view, setView] = useState<ViewKind>("bracket");
   const [currentRound] = useState<number>(3);
@@ -811,13 +813,16 @@ export default function TournamentModal({
   const registeredTeamAvailability = useMemo(
     () =>
       registeredTeam
-        ? teamAvailability(registeredTeam, crabsById)
+        ? teamAvailability(registeredTeam, crabsById, {
+            staminaCost: STAMINA_COSTS.tournament,
+            recoveryBoostUntil: player?.recoveryBoostUntil ?? 0,
+          })
         : {
             available: false,
             reasons: ["Select an available team first"],
             filledCount: 0,
           },
-    [registeredTeam, crabsById]
+    [registeredTeam, crabsById, player?.recoveryBoostUntil]
   );
 
   // Live HP ticking — every 1.5s, damage random alive crabs and append a log line.
@@ -933,6 +938,16 @@ export default function TournamentModal({
           "Select an available team first.",
         variant: "warning",
       });
+      return;
+    }
+    // Stamina: registration starts the tournament run — the team pays
+    // STAMINA_COSTS.tournament per crab (atomic; action toasts why).
+    if (
+      !chargeStamina(
+        registeredTeam.crabIds.filter(Boolean),
+        STAMINA_COSTS.tournament
+      )
+    ) {
       return;
     }
     pushToast({
@@ -1496,7 +1511,9 @@ function RegisterView({
   const crabsById = new Map(crabs.map((c) => [c.id, c] as const));
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
   const availability = selectedTeam
-    ? teamAvailability(selectedTeam, crabsById)
+    ? teamAvailability(selectedTeam, crabsById, {
+        staminaCost: STAMINA_COSTS.tournament,
+      })
     : {
         available: false,
         reasons: ["Select an available team first"],
@@ -1562,6 +1579,7 @@ function RegisterView({
           selectedTeamId={selectedTeamId}
           onSelect={onSelectTeam}
           requireIdle={true}
+          staminaCost={STAMINA_COSTS.tournament}
           testIdPrefix="tournament-team-select"
         />
         {!selectedTeam && (

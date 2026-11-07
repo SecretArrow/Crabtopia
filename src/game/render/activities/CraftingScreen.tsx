@@ -1,9 +1,10 @@
 // Crabtopia - Crafting activity screen ("Tide Forge")
-// Materials + Recipes tabs. Crafting consumes materials from localStorage
-// inventory and produces items. Forge animation plays on every craft.
+// Materials + Recipes tabs. Crafting consumes materials from the
+// player profile inventory and produces items. Forge animation plays
+// on every craft.
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "../../store/gameStore";
 import {
@@ -12,7 +13,6 @@ import {
   RarityBadge,
   rarityColor,
 } from "../ui";
-import { useLocalStorage } from "../useLocalStorage";
 import {
   MATERIAL_LIST,
   RECIPE_LIST,
@@ -20,23 +20,24 @@ import {
   type MaterialId,
   type RecipeDef,
 } from "../../data/materials";
-import {
-  INV_KEY,
-  DEFAULT_INVENTORY,
-  consumeMaterials,
-  addItem,
-  type InventoryState,
-} from "../useLocalStorage";
 
 type Tab = "materials" | "recipes";
 
 export default function CraftingScreen() {
   const setScreen = useGame((s) => s.setScreen);
   const pushToast = useGame((s) => s.pushToast);
+  const player = useGame((s) => s.player);
+  const spendMaterials = useGame((s) => s.spendMaterials);
+  const gainItem = useGame((s) => s.gainItem);
 
-  const [inv, setInv] = useLocalStorage<InventoryState>(
-    INV_KEY,
-    DEFAULT_INVENTORY
+  // Materials + items live in the player profile (item-market escrow
+  // settles against the same stock).
+  const inv = useMemo(
+    () => ({
+      materials: player?.materials ?? {},
+      items: player?.items ?? {},
+    }),
+    [player]
   );
   const [tab, setTab] = useState<Tab>("recipes");
   const [crafting, setCrafting] = useState<RecipeDef | null>(null);
@@ -52,9 +53,8 @@ export default function CraftingScreen() {
     setCrafting(recipe);
     // Forge animation runs ~1s, then commit.
     setTimeout(() => {
-      setInv((prev) =>
-        addItem(consumeMaterials(prev, recipe.materials), recipe.id, 1)
-      );
+      spendMaterials(recipe.materials);
+      gainItem(recipe.id, 1);
       pushToast({
         title: `Crafted ${recipe.name}!`,
         description: `${recipe.icon} added to your vault.`,

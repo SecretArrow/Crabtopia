@@ -5,7 +5,7 @@
 "use client";
 
 import { useState } from "react";
-import { Crab } from "../types";
+import { Crab, PlayerProfile } from "../types";
 import { FACTIONS } from "../content/factions";
 import { CLASSES } from "../content/classes";
 import { BREEDS_BY_ID } from "../content/breeds";
@@ -13,6 +13,7 @@ import { crabBaseBP } from "../engine/bp";
 import { useGame } from "../store/gameStore";
 import {
   formatBP,
+  formatGold,
   formatTime,
   GoldIcon,
   RarityBadge,
@@ -22,6 +23,17 @@ import {
   classIcon,
 } from "./ui";
 import CrabRenderer from "./CrabRenderer";
+import StaminaBar, { staminaColor } from "./StaminaBar";
+import {
+  RECOVERY_ITEM_LIST,
+  isWounded,
+  itemCountOf,
+  recoveryItemPrice,
+  staminaOf,
+  woundRemainingMs,
+  type RecoveryItemId,
+} from "../engine/stamina";
+import { MAX_STAMINA, RECOVERY_BOOST_MULTIPLIER } from "../engine/config";
 import { ClassArtImage } from "./CrabArtImage";
 import ElementBadge from "./ElementBadge";
 import ElementAura from "./ElementAura";
@@ -343,6 +355,8 @@ export default function CrabDetailModal({ crab, onClose }: Props) {
   const [useProcedural, setUseProcedural] = useState(false);
   const [lineageOpen, setLineageOpen] = useState(false);
   const graduateCrab = useGame((s) => s.graduateCrab);
+  const useRecoveryItem = useGame((s) => s.useRecoveryItem);
+  const buyRecoveryItem = useGame((s) => s.buyRecoveryItem);
 
   // ---- Lineage data (resolved against the player's owned crabs only) ----
   const player = useGame((s) => s.player);
@@ -507,6 +521,16 @@ export default function CrabDetailModal({ crab, onClose }: Props) {
             </div>
           ))}
         </div>
+
+        {/* Condition: stamina, wounds, recovery supplies */}
+        {player && crab.ownerId === "player" && (
+          <ConditionPanel
+            player={player}
+            crab={player.crabs.find((c) => c.id === crab.id) ?? crab}
+            onUse={useRecoveryItem}
+            onBuy={buyRecoveryItem}
+          />
+        )}
 
         {/* Gene expression table */}
         <div className="rounded-xl p-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(124,245,225,0.12)" }}>
@@ -704,5 +728,144 @@ export default function CrabDetailModal({ crab, onClose }: Props) {
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ---------- Condition panel (stamina / wounds / recovery supplies) ----------
+// Live view of the crab's exertion state (engine/stamina.ts) plus the
+// recovery shelf: owned supplies can be used on THIS crab right here;
+// buying tops up from the Bazaar shelf without leaving the dossier.
+function ConditionPanel({
+  player,
+  crab,
+  onUse,
+  onBuy,
+}: {
+  player: PlayerProfile;
+  crab: Crab;
+  onUse: (itemId: RecoveryItemId, crabId?: string) => boolean;
+  onBuy: (itemId: RecoveryItemId) => boolean;
+}) {
+  const now = Date.now();
+  const boostUntil = player.recoveryBoostUntil ?? 0;
+  const boosted = boostUntil > now;
+  const wounded = isWounded(crab, now);
+  const stamina = Math.floor(staminaOf(crab, now, boostUntil));
+
+  return (
+    <div
+      className="rounded-xl p-2.5"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(124,245,225,0.12)",
+      }}
+    >
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-[10px] uppercase tracking-wide opacity-70">
+          Condition
+        </div>
+        {boosted && (
+          <span
+            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+            style={{
+              background: "rgba(255,209,102,0.15)",
+              color: "#FFD166",
+              border: "1px solid rgba(255,209,102,0.4)",
+            }}
+          >
+            🕯️ Second Wind ×{RECOVERY_BOOST_MULTIPLIER} ·{" "}
+            {Math.ceil((boostUntil - now) / 60000)}m
+          </span>
+        )}
+      </div>
+
+      <StaminaBar crab={crab} now={now} boostUntil={boostUntil} />
+      <div className="text-[10px] opacity-75 mt-1">
+        {wounded ? (
+          <span style={{ color: "#FF8FA3" }}>
+            🩹 Wounded — {Math.ceil(woundRemainingMs(crab, now) / 60000)} min
+            left. Cannot deploy and stamina does not regen until healed.
+          </span>
+        ) : (
+          <>
+            ⚡ {stamina}/{MAX_STAMINA} · regens 20/hour while resting
+            {boosted ? " (boosted ×3)" : ""} · refills fully at the daily
+            reset.{" "}
+            <span style={{ color: staminaColor(stamina) }}>
+              {stamina >= MAX_STAMINA
+                ? "Fully rested."
+                : stamina < 25
+                  ? "Exhausted — rest or a tonic before the next deployment."
+                  : ""}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* Recovery supplies: use on this crab / buy more */}
+      <div className="mt-2 space-y-1">
+        {RECOVERY_ITEM_LIST.map((def) => {
+          const owned = itemCountOf(player, def.id);
+          const price = recoveryItemPrice(player, def.id);
+          const canAfford = player.gold >= price;
+          return (
+            <div
+              key={def.id}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5"
+              style={{
+                background: "rgba(10,27,61,0.45)",
+                border: "1px solid rgba(124,245,225,0.10)",
+              }}
+            >
+              <span className="text-base" aria-hidden="true">
+                {def.icon}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-bold leading-tight">
+                  {def.name}{" "}
+                  <span className="opacity-60 font-normal">×{owned}</span>
+                </div>
+                <div className="text-[9px] opacity-60 leading-tight truncate">
+                  {def.description}
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={owned <= 0}
+                onClick={() => onUse(def.id, def.needsTarget ? crab.id : undefined)}
+                className="px-2 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-35"
+                style={{
+                  background: "rgba(18,167,160,0.25)",
+                  border: "1px solid rgba(124,245,225,0.45)",
+                  color: "#7CF5E1",
+                }}
+                title={owned <= 0 ? `No ${def.name} in your vault` : `Use ${def.name}`}
+              >
+                Use
+              </button>
+              <button
+                type="button"
+                disabled={!canAfford}
+                onClick={() => onBuy(def.id)}
+                className="px-2 py-1 rounded-md text-[10px] font-bold transition-all disabled:opacity-35 flex items-center gap-0.5"
+                style={{
+                  background: "rgba(255,209,102,0.15)",
+                  border: "1px solid rgba(255,209,102,0.45)",
+                  color: "#FFD166",
+                }}
+                title={`Buy ${def.name} — 100% funds the Tide Treasury`}
+              >
+                <GoldIcon size={10} />
+                {formatGold(price)}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="text-[9px] opacity-50 mt-1.5">
+        Supplies also stock the Bazaar&apos;s Items &amp; Supplies shelf —
+        every GOLD spent funds the Tide Treasury.
+      </div>
+    </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   insufficientRosterMessage,
 } from "../engine/teamEligibility";
 import { teamStatsSummary, toTeamSlots, filledCrabIds } from "../engine/teams";
+import StaminaBar from "./StaminaBar";
 import { resolveTeamFormation, ROWS, type RowId } from "../engine/formation";
 import { formatBP } from "../engine/bp";
 import { CLASSES } from "../content/classes";
@@ -30,6 +31,12 @@ interface TeamSelectProps {
   onSelect: (teamId: string) => void;
   requireIdle?: boolean;
   testIdPrefix?: string;
+  /**
+   * Per-crab stamina cost of the activity this picker serves
+   * (STAMINA_COSTS): members below the cost block the team with an
+   * "exhausted" reason, and wounded members always block.
+   */
+  staminaCost?: number;
 }
 
 const ROW_LABEL: Record<RowId, string> = {
@@ -45,8 +52,11 @@ export default function TeamSelect({
   onSelect,
   requireIdle = true,
   testIdPrefix = "team-select",
+  staminaCost,
 }: TeamSelectProps) {
   const setScreen = useGame((s) => s.setScreen);
+  const recoveryBoostUntil = useGame((s) => s.player?.recoveryBoostUntil ?? 0);
+  const now = Date.now();
 
   const crabsById = useMemo(
     () => new Map(crabs.map((c) => [c.id, c] as const)),
@@ -126,7 +136,12 @@ export default function TeamSelect({
     >
       {insufficientBanner}
       {teams.map((team) => {
-        const availability = teamAvailability(team, crabsById, { requireIdle });
+        const availability = teamAvailability(team, crabsById, {
+          requireIdle,
+          staminaCost,
+          now,
+          recoveryBoostUntil,
+        });
         const isAvailable = availability.available;
         const isSelected = selectedTeamId === team.id;
         const faction = dominantFaction(team, crabsById);
@@ -201,9 +216,17 @@ export default function TeamSelect({
                   <div
                     key={crab.id}
                     className="rounded-lg bg-black/30 p-0.5 shrink-0"
+                    style={{ width: 52 }}
                     title={`${crab.name} · ${CLASSES[crab.classId].name} Lv${crab.level}`}
                   >
                     <CrabRenderer crab={crab} size={48} />
+                    {/* Stamina / wound state at a glance */}
+                    <StaminaBar
+                      crab={crab}
+                      now={now}
+                      boostUntil={recoveryBoostUntil}
+                      compact
+                    />
                   </div>
                 );
               })}

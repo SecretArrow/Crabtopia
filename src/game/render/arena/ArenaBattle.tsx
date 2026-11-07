@@ -130,6 +130,9 @@ export interface ArenaBattleProps {
     arenaId: string;
     /** Factual post-battle insight lines for the result screen. */
     insights?: string[];
+    /** Player crabs whose HP hit 0 — the controller Winds them
+     *  (−stamina, never a wound; arena is a sport). */
+    defeatedCrabIds: string[];
   }) => void;
 }
 
@@ -788,6 +791,9 @@ export default function ArenaBattle({
         itemsFound: rewards.itemsFound,
         arenaId,
         insights: computeBattleInsights(state, sim.events),
+        defeatedCrabIds: state.player
+          .filter((c) => c.isDefeated)
+          .map((c) => c.crabId),
       });
     }, 1600);
   }, [state, sim, entryCost, onComplete, arenaId, battleTimeout]);
@@ -1097,6 +1103,7 @@ export default function ArenaBattle({
         xpReward: 0,
         itemsFound: [],
         arenaId,
+        defeatedCrabIds: [],
       });
     }, 300);
   }, [onComplete, arenaId, battleTimeout, speed]);

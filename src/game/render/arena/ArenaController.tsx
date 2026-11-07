@@ -7,7 +7,10 @@ import type { Formation } from "../../types";
 import { deriveFormationForCrabs } from "../../engine/formation";
 import { useGame } from "../../store/gameStore";
 import { generateOpponents, rerollOpponents, Opponent } from "../../data/opponents";
-import { useLocalStorage, INV_KEY, DEFAULT_INVENTORY, addMaterials, type InventoryState } from "../useLocalStorage";
+import { useLocalStorage } from "../useLocalStorage";
+import { STAMINA_COSTS } from "../../engine/config";
+import { isWounded, staminaOf } from "../../engine/stamina";
+import type { MaterialId } from "../../data/materials";
 import ArenaSplash from "./ArenaSplash";
 import ArenaMenu from "./ArenaMenu";
 import ArenaLeaderboard from "./ArenaLeaderboard";
@@ -36,6 +39,8 @@ interface ArenaRewards {
   arenaId: string;
   /** Factual post-battle insight lines (ArenaBattle computes them). */
   insights?: string[];
+  /** Player crabs whose HP hit 0 — Winded afterwards (−stamina). */
+  defeatedCrabIds?: string[];
 }
 
 interface BattleLogEntry {
@@ -57,6 +62,9 @@ export default function ArenaController() {
   const addXp = useGame((s) => s.addXp);
   const progressQuest = useGame((s) => s.progressQuest);
   const spendGold = useGame((s) => s.spendGold);
+  const gainMaterials = useGame((s) => s.gainMaterials);
+  const chargeStamina = useGame((s) => s.chargeStamina);
+  const windCrabs = useGame((s) => s.windCrabs);
   const pushToast = useGame((s) => s.pushToast);
   const setScreen = useGame((s) => s.setScreen);
 
@@ -77,13 +85,6 @@ export default function ArenaController() {
   const [battleLog, setBattleLog] = useLocalStorage<BattleLogEntry[]>(
     BATTLE_LOG_KEY,
     []
-  );
-  // Activity inventory (materials + items) — the same store Mining/
-  // Exploration/Crafting/Inventory read and write. Arena item drops are
-  // deposited here so victory spoils actually reach the player's vault.
-  const [, setInventory] = useLocalStorage<InventoryState>(
-    INV_KEY,
-    DEFAULT_INVENTORY
   );
 
   // Derive opponents from seed (cached in state to avoid recompute on every render)
@@ -194,6 +195,33 @@ export default function ArenaController() {
   const handleDeploy = useCallback(
     (crabIds: string[], formation: Formation, lanes: Record<string, number>) => {
       if (!selectedOpponent || !player) return;
+      // Stamina gate (checked purely first, so a gold failure below
+      // never spends stamina): wounded crabs cannot fight at all, and
+      // every fighter pays STAMINA_COSTS.arena at the start.
+      const now = Date.now();
+      const boostUntil = player.recoveryBoostUntil ?? 0;
+      const teamCrabs = crabIds
+        .map((id) => player.crabs.find((c) => c.id === id))
+        .filter(Boolean) as NonNullable<typeof player>["crabs"];
+      const wounded = teamCrabs.find((c) => isWounded(c, now));
+      if (wounded) {
+        pushToast({
+          title: `${wounded.name} is wounded — healing.`,
+          description: "Wounded crabs cannot battle. Coral Salve cures instantly.",
+          variant: "error",
+        });
+        return;
+      }
+      const tired = teamCrabs.find(
+        (c) => staminaOf(c, now, boostUntil) < STAMINA_COSTS.arena
+      );
+      if (tired) {
+        pushToast({
+          title: `${tired.name} is exhausted — needs rest or a tonic.`,
+          variant: "error",
+        });
+        return;
+      }
       // Charge entry cost
       const ok = spendGold(selectedOpponent.entryCost);
       if (!ok) {
@@ -204,12 +232,15 @@ export default function ArenaController() {
         });
         return;
       }
+      // Guaranteed to pass (state cannot have worsened synchronously);
+      // if it somehow fails, the battle simply doesn't start.
+      if (!chargeStamina(crabIds, STAMINA_COSTS.arena)) return;
       setSelectedTeamCrabIds(crabIds);
       setSelectedFormation(formation);
       setSelectedLanes(lanes);
       setStep("loading");
     },
-    [selectedOpponent, player, spendGold, pushToast]
+    [selectedOpponent, player, spendGold, chargeStamina, pushToast]
   );
 
   const handleTeamBuilderBack = useCallback(() => setStep("opponent_list"), []);
@@ -223,22 +254,28 @@ export default function ArenaController() {
   const handleBattleComplete = useCallback(
     (result: ArenaRewards) => {
       if (!player || !selectedOpponent) return;
+      // Winded: every player crab whose HP hit 0 is drained of extra
+      // stamina — win or lose. Arena NEVER wounds (no lockout), so
+      // rematches keep flowing.
+      if (result.defeatedCrabIds && result.defeatedCrabIds.length > 0) {
+        windCrabs(result.defeatedCrabIds);
+      }
       // Award rewards
       if (result.winner === "player") {
         creditGold(result.goldReward);
         // XP is real: calculateRewards sizes it (enemy avg level × 15 per
         // surviving crab) and it feeds the Shellwarden level curve.
         addXp(result.xpReward);
-        // Item drops land in the shared activity inventory (the same store
-        // Mining/Exploration/Crafting/Inventory use), not just the result
-        // screen.
+        // Item drops land in the player's materials (the vault the
+        // Mining/Exploration/Crafting/Inventory screens and the Bazaar
+        // item market all share), not just the result screen.
         if (result.itemsFound.length > 0) {
-          const gains: Parameters<typeof addMaterials>[1] = {};
+          const gains: Partial<Record<MaterialId, number>> = {};
           for (const it of result.itemsFound) {
-            gains[it.itemId as keyof typeof gains] =
-              (gains[it.itemId as keyof typeof gains] ?? 0) + it.count;
+            const mid = it.itemId as MaterialId;
+            gains[mid] = (gains[mid] ?? 0) + it.count;
           }
-          setInventory((prev) => addMaterials(prev, gains));
+          gainMaterials(gains);
         }
         // Brawler quest: an Arena victory (the Coliseum's successor).
         progressQuest("coliseum_win");
@@ -273,7 +310,7 @@ export default function ArenaController() {
       setLastResult(result);
       setStep("result");
     },
-    [player, selectedOpponent, creditGold, addXp, progressQuest, pushToast, setBattleLog, setInventory]
+    [player, selectedOpponent, creditGold, addXp, progressQuest, pushToast, setBattleLog, gainMaterials, windCrabs]
   );
 
   // ---- Result ----

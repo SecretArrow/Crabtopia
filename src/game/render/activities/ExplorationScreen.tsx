@@ -23,17 +23,14 @@ import {
 import {
   EXPLORATION_KEY,
   DEFAULT_EXPLORATION,
-  INV_KEY,
-  DEFAULT_INVENTORY,
   BUFFS_KEY,
   DEFAULT_BUFFS,
   MAX_EXPLORATION_TICKETS,
   EXPLORATION_DAY_MS,
-  addMaterials,
   type ExplorationState,
-  type InventoryState,
   type BuffsState,
 } from "../useLocalStorage";
+import { STAMINA_COSTS } from "../../engine/config";
 import { mulberry32, randInt, pick } from "../../engine/rng";
 import { generateCrab } from "../../engine/crabs";
 import type { Crab } from "../../types";
@@ -124,15 +121,13 @@ export default function ExplorationScreen() {
   const pushToast = useGame((s) => s.pushToast);
   const creditGold = useGame((s) => s.creditGold);
   const spendGold = useGame((s) => s.spendGold);
+  const gainMaterials = useGame((s) => s.gainMaterials);
+  const chargeStamina = useGame((s) => s.chargeStamina);
   const player = useGame((s) => s.player);
 
   const [expl, setExpl] = useLocalStorage<ExplorationState>(
     EXPLORATION_KEY,
     DEFAULT_EXPLORATION
-  );
-  const [inv, setInv] = useLocalStorage<InventoryState>(
-    INV_KEY,
-    DEFAULT_INVENTORY
   );
   const [buffs, setBuffs] = useLocalStorage<BuffsState>(
     BUFFS_KEY,
@@ -244,6 +239,13 @@ export default function ExplorationScreen() {
     if (expl.revealed[idx]) return;
     if (revealingIdx !== null || battle !== null) return;
 
+    // Stamina: each outing (one ticket = one reveal) charges the
+    // expedition team STAMINA_COSTS.exploration per crab at the start —
+    // atomic, so a refusal spends no ticket. The action toasts why.
+    if (!chargeStamina(teamCrabs.map((c) => c.id), STAMINA_COSTS.exploration)) {
+      return;
+    }
+
     // Spend a ticket + mark revealed.
     setExpl((prev) => ({
       ...prev,
@@ -285,7 +287,7 @@ export default function ExplorationScreen() {
       }
       const mats = chestMaterials(rng, matCount);
       creditGold(gold);
-      setInv((prev) => addMaterials(prev, mats));
+      gainMaterials(mats);
       const matSummary = Object.entries(mats)
         .map(([mid, n]) => `${MATERIALS[mid as MaterialId].icon} ×${n}`)
         .join(" ");
@@ -397,7 +399,7 @@ export default function ExplorationScreen() {
             const gold = randInt(80, 250, rng);
             const mats = chestMaterials(rng, randInt(1, 3, rng));
             creditGold(gold);
-            setInv((prev) => addMaterials(prev, mats));
+            gainMaterials(mats);
             const matSummary = Object.entries(mats)
               .map(([mid, n]) => `${MATERIALS[mid as MaterialId].icon} ×${n}`)
               .join(" ");
@@ -509,6 +511,7 @@ export default function ExplorationScreen() {
             selectedTeamId={selectedTeamId}
             onSelect={setSelectedTeamId}
             requireIdle={true}
+            staminaCost={STAMINA_COSTS.exploration}
             testIdPrefix="exploration-team-select"
           />
           {!selectedTeam && (

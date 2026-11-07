@@ -15,7 +15,7 @@ import {
   StatChip,
   PlanktonField,
 } from "../ui";
-import { CONFIG } from "../../engine/config";
+import { CONFIG, STAMINA_COSTS } from "../../engine/config";
 import RaidModal from "../RaidModal";
 import TeamSelect from "../TeamSelect";
 import { Modal } from "../Modal";
@@ -644,6 +644,7 @@ function DeployModal({ siteId, onClose }: { siteId: string; onClose: () => void 
         crabs={player.crabs}
         selectedTeamId={selectedTeamId}
         requireIdle
+        staminaCost={STAMINA_COSTS.dive}
         onSelect={(id) => {
           setSelectedTeamId(id);
           handleDeploy(id);

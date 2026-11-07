@@ -25,6 +25,21 @@ import {
   indexedPrice,
 } from "../../engine/economy";
 import {
+  RECOVERY_ITEM_LIST,
+  itemCountOf,
+  recoveryItemPrice,
+} from "../../engine/stamina";
+import {
+  itemSaleChancePerHour,
+  materialReferenceValue,
+  maxItemUnitPrice,
+} from "../../engine/itemMarket";
+import {
+  MATERIALS,
+  MATERIAL_LIST,
+  type MaterialId,
+} from "../../data/materials";
+import {
   GENESIS_TOTAL,
   GENESIS_MARKET_COUNT,
   GENESIS_RESERVE_COUNT,
@@ -37,7 +52,8 @@ import ElementBadge from "../ElementBadge";
 import { resolveElement } from "../../engine/elements";
 import { Modal } from "../Modal";
 import { getGeneVariant, BODY_PART_SLOTS, RARITY_ORDER } from "../../content/bodyparts";
-import type { FactionId, ClassId, Crab, BazaarListing, Egg, Rarity } from "../../types";
+import type { FactionId, ClassId, Crab, BazaarListing, Egg, Rarity, PlayerProfile } from "../../types";
+import type { RecoveryItemId } from "../../engine/stamina";
 
 type SortKey = "price" | "bp" | "rarity";
 
@@ -87,9 +103,13 @@ export default function BazaarScreen() {
   const listEggInBazaar = useGame((s) => s.listEggInBazaar);
   const genesisSoldIds = useGame((s) => s.genesisSoldIds);
   const buyGenesisCrab = useGame((s) => s.buyGenesisCrab);
+  const buyRecoveryItem = useGame((s) => s.buyRecoveryItem);
+  const buyItemListing = useGame((s) => s.buyItemListing);
+  const listItemForSale = useGame((s) => s.listItemForSale);
+  const cancelItemListing = useGame((s) => s.cancelItemListing);
   // Deep-link: "insufficient crabs" guidance CTAs may request the Genesis
   // tab directly via a one-shot sessionStorage flag.
-  const [tab, setTab] = useState<"market" | "genesis">(() => {
+  const [tab, setTab] = useState<"market" | "genesis" | "items">(() => {
     try {
       const requested = sessionStorage.getItem("crabtopia-bazaar-tab");
       if (requested) {
@@ -119,7 +139,8 @@ export default function BazaarScreen() {
 
   const filteredListings = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = bazaarListings.slice();
+    // Material listings live in the Items & Supplies tab, not here.
+    let list = bazaarListings.filter((l) => l.itemType !== "material");
     if (itemType !== "all") list = list.filter((l) => l.itemType === itemType);
 
     list = list.filter((l) => {
@@ -186,6 +207,7 @@ export default function BazaarScreen() {
   const recentFeed = useMemo(
     () =>
       [...bazaarListings]
+        .filter((l) => l.itemType !== "material")
         .sort((a, b) => b.listedAt - a.listedAt)
         .slice(0, 5)
         .map((l) => ({
@@ -275,13 +297,25 @@ export default function BazaarScreen() {
           >
             ✨ Genesis Collection
           </button>
+          <button
+            role="tab"
+            aria-selected={tab === "items"}
+            onClick={() => setTab("items")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${tab === "items" ? "text-white" : "text-white/65 hover:text-white"}`}
+            style={{
+              background: tab === "items" ? "linear-gradient(135deg, #B45309, #7C2D12)" : "rgba(255,255,255,0.05)",
+              borderColor: tab === "items" ? "#FFB347" : "rgba(124,245,225,0.18)",
+            }}
+          >
+            🧰 Items &amp; Supplies
+          </button>
         </div>
 
         {tab === "market" && (
         <>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
-          <StatBox label="Listings" value={bazaarListings.length} />
+          <StatBox label="Listings" value={bazaarListings.filter((l) => l.itemType !== "material").length} />
           <StatBox label="Your Gold" value={formatGold(player.gold)} gold />
           <StatBox label="Fee" value={`${CONFIG.bazaarFeePercent * 100}%`} />
         </div>
@@ -486,6 +520,17 @@ export default function BazaarScreen() {
             onBuy={buyGenesisCrab}
           />
         )}
+        {tab === "items" && (
+          <ItemsPanel
+            player={player}
+            listings={bazaarListings}
+            priceIndex={priceIndex}
+            onBuyRecovery={buyRecoveryItem}
+            onBuyItem={buyItemListing}
+            onListItem={listItemForSale}
+            onCancelListing={cancelItemListing}
+          />
+        )}
       </div>
 
       {/* Sell modal */}
@@ -591,6 +636,327 @@ export default function BazaarScreen() {
         </Modal>
       )}
     </div>
+  );
+}
+
+// ---------- Items & Supplies (recovery shelf + material market) ----------
+
+/** NPC demand hint for a player listing's unit price vs reference. */
+function demandHint(unitPrice: number, materialId: MaterialId): { text: string; color: string } {
+  const ref = materialReferenceValue(materialId);
+  const ratio = ref > 0 ? unitPrice / ref : Infinity;
+  if (ratio <= 1) return { text: "High demand — sells fast", color: "#4FB477" };
+  if (ratio <= 2) return { text: "Low demand — patience needed", color: "#FFD166" };
+  return { text: "No demand above 200% of market price", color: "#FF6F91" };
+}
+
+function ItemsPanel({
+  player,
+  listings,
+  priceIndex,
+  onBuyRecovery,
+  onBuyItem,
+  onListItem,
+  onCancelListing,
+}: {
+  player: PlayerProfile;
+  listings: BazaarListing[];
+  priceIndex: number;
+  onBuyRecovery: (id: RecoveryItemId) => boolean;
+  onBuyItem: (listingId: string) => boolean;
+  onListItem: (m: MaterialId, qty: number, unitPrice: number) => boolean;
+  onCancelListing: (listingId: string) => boolean;
+}) {
+  const npcListings = listings.filter(
+    (l) => l.itemType === "material" && l.sellerId === "npc"
+  );
+  const myListings = listings.filter(
+    (l) => l.itemType === "material" && l.sellerId === "player"
+  );
+  const ownedMaterials = MATERIAL_LIST.filter(
+    (m) => (player.materials?.[m.id] ?? 0) > 0
+  );
+
+  const [sellMaterial, setSellMaterial] = useState<MaterialId>("kelp_fiber");
+  const [sellQty, setSellQty] = useState(1);
+  const [sellPrice, setSellPrice] = useState(() =>
+    materialReferenceValue("kelp_fiber")
+  );
+  const sellOwned = player.materials?.[sellMaterial] ?? 0;
+  const sellCap = maxItemUnitPrice(sellMaterial);
+  const sellRef = materialReferenceValue(sellMaterial);
+  const sellTotal = Math.max(0, sellQty) * Math.max(0, sellPrice);
+  const sellFee = Math.round(sellTotal * CONFIG.bazaarFeePercent);
+
+  const pickMaterial = (id: MaterialId) => {
+    setSellMaterial(id);
+    setSellPrice(materialReferenceValue(id));
+    setSellQty(1);
+  };
+
+  const handleList = () => {
+    if (onListItem(sellMaterial, sellQty, sellPrice)) {
+      setSellQty(1);
+    }
+  };
+
+  return (
+    <section data-testid="items-section" className="space-y-4">
+      {/* ----- Recovery Supplies shelf ----- */}
+      <div>
+        <h2 className="text-lg md:text-xl font-bold font-display">
+          🩹 Recovery Supplies
+        </h2>
+        <p className="text-xs opacity-70">
+          Tonics, salves and incense for tired and wounded crabs. Prices are
+          system prices (they follow the GOLD price index).{" "}
+          <span style={{ color: "#FFD166" }}>
+            100% of every sale funds the Tide Treasury
+          </span>{" "}
+          — your GOLD moves to the developers&apos; prize reserve; no new
+          GOLD is created.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {RECOVERY_ITEM_LIST.map((def) => {
+          const owned = itemCountOf(player, def.id);
+          const price = recoveryItemPrice(player, def.id);
+          const canAfford = player.gold >= price;
+          return (
+            <div
+              key={def.id}
+              className="rounded-xl border p-3 flex flex-col"
+              style={{
+                background: "rgba(10,27,61,0.6)",
+                borderColor: "rgba(255,179,71,0.35)",
+              }}
+            >
+              <div className="text-3xl mb-1" aria-hidden="true">
+                {def.icon}
+              </div>
+              <div className="text-sm font-bold font-display leading-tight">
+                {def.name}
+              </div>
+              <div className="text-[10px] opacity-65 leading-snug flex-1">
+                {def.description}
+              </div>
+              <div className="text-[10px] mt-1.5">
+                Owned: <span className="font-bold" style={{ color: "#7CF5E1" }}>×{owned}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <span
+                  className="text-[11px] font-bold flex items-center gap-0.5"
+                  style={{ color: "#FFD166" }}
+                >
+                  <GoldIcon size={11} />
+                  {formatGold(price)}
+                </span>
+                <GlowButton
+                  variant={canAfford ? "gold" : "ghost"}
+                  size="sm"
+                  disabled={!canAfford}
+                  onClick={() => onBuyRecovery(def.id)}
+                  title={canAfford ? `Buy ${def.name}` : `Need ${formatGold(price)} GOLD`}
+                >
+                  Buy
+                </GlowButton>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ----- Item market: NPC shelf ----- */}
+      <div>
+        <h2 className="text-lg md:text-xl font-bold font-display">
+          🛒 Item Market
+        </h2>
+        <p className="text-xs opacity-70">
+          Dropped materials, traded for GOLD. Market price = the reference
+          value; NPC shelf prices follow the GOLD price index. The{" "}
+          {CONFIG.bazaarFeePercent * 100}% Bazaar fee applies to every trade
+          (1 point funds the Tide Treasury, the rest is burned).
+        </p>
+      </div>
+      {npcListings.length === 0 ? (
+        <EmptyState
+          message="The item shelf is empty"
+          hint="NPC traders restock with a fresh rotation once the shelf sells out."
+        />
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {npcListings.map((l) => {
+            const def = MATERIALS[l.itemId as MaterialId];
+            if (!def) return null;
+            const qty = l.quantity ?? 1;
+            const unit = effectiveListingPrice(l, priceIndex);
+            const total = unit * qty;
+            const canAfford = player.gold >= total;
+            return (
+              <div
+                key={l.id}
+                className="rounded-xl border p-3 flex flex-col"
+                style={{
+                  background: "rgba(10,27,61,0.6)",
+                  borderColor: "rgba(124,245,225,0.2)",
+                }}
+              >
+                <div className="flex items-start justify-between">
+                  <span className="text-3xl" aria-hidden="true">{def.icon}</span>
+                  <RarityBadge rarity={def.rarity} />
+                </div>
+                <div className="text-sm font-bold font-display leading-tight mt-1">
+                  {def.name} <span className="opacity-60">×{qty}</span>
+                </div>
+                <div className="text-[10px] opacity-60">
+                  {l.sellerName} · market price {formatGold(def.baseValue)}/ea
+                </div>
+                <div className="flex items-center justify-between gap-2 mt-2">
+                  <span
+                    className="text-[11px] font-bold flex items-center gap-0.5"
+                    style={{ color: "#FFD166" }}
+                  >
+                    <GoldIcon size={11} />
+                    {formatGold(total)}
+                  </span>
+                  <GlowButton
+                    variant={canAfford ? "teal" : "ghost"}
+                    size="sm"
+                    disabled={!canAfford}
+                    onClick={() => onBuyItem(l.id)}
+                    title={canAfford ? `Buy ${qty}× ${def.name}` : `Need ${formatGold(total)} GOLD`}
+                  >
+                    Buy
+                  </GlowButton>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ----- Sell your materials ----- */}
+      <div
+        className="rounded-xl border p-3"
+        style={{
+          background: "rgba(10,27,61,0.55)",
+          borderColor: "rgba(124,245,225,0.18)",
+        }}
+      >
+        <div className="text-sm font-bold font-display mb-1">
+          💰 Sell your materials
+        </div>
+        {ownedMaterials.length === 0 ? (
+          <EmptyState
+            compact
+            message="No materials to sell yet"
+            hint="Mine nodes, explore the wilderness, or win Arena drops — then list them here."
+          />
+        ) : (
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-[11px] opacity-80">
+              Material
+              <select
+                value={sellMaterial}
+                onChange={(e) => pickMaterial(e.target.value as MaterialId)}
+                className="block mt-0.5 h-9 text-xs px-2 rounded-md bg-white/10 border border-white/15 focus:outline-none focus:border-[#7CF5E1]"
+              >
+                {ownedMaterials.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.icon} {m.name} — owned {player.materials?.[m.id] ?? 0} · market{" "}
+                    {formatGold(m.baseValue)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-[11px] opacity-80">
+              Quantity (max {sellOwned})
+              <input
+                type="number"
+                min={1}
+                max={sellOwned}
+                value={sellQty}
+                onChange={(e) =>
+                  setSellQty(
+                    Math.max(1, Math.min(sellOwned, parseInt(e.target.value) || 1))
+                  )
+                }
+                className="block mt-0.5 h-9 w-20 text-xs px-2 rounded-md bg-white/10 border border-white/15 focus:outline-none focus:border-[#7CF5E1]"
+              />
+            </label>
+            <label className="text-[11px] opacity-80">
+              Unit price (cap {formatGold(sellCap)})
+              <input
+                type="number"
+                min={1}
+                value={sellPrice}
+                onChange={(e) =>
+                  setSellPrice(Math.max(1, parseInt(e.target.value) || 1))
+                }
+                className="block mt-0.5 h-9 w-24 text-xs px-2 rounded-md bg-white/10 border border-white/15 focus:outline-none focus:border-[#7CF5E1]"
+              />
+            </label>
+            <div className="text-[11px] opacity-80 pb-1">
+              <span style={{ color: demandHint(sellPrice, sellMaterial).color }}>
+                {demandHint(sellPrice, sellMaterial).text}
+              </span>
+              <br />
+              You receive if sold:{" "}
+              <span className="font-bold" style={{ color: "#FFD166" }}>
+                {formatGold(sellTotal - sellFee)} GOLD
+              </span>{" "}
+              (fee {formatGold(sellFee)} · market price {formatGold(sellRef)}/ea)
+            </div>
+            <GlowButton variant="gold" size="sm" onClick={handleList}>
+              List {sellQty}× for sale
+            </GlowButton>
+          </div>
+        )}
+
+        {/* Your live listings */}
+        {myListings.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            <div className="text-[11px] font-bold uppercase tracking-wide opacity-60">
+              Your listings — escrowed until sold or cancelled
+            </div>
+            {myListings.map((l) => {
+              const def = MATERIALS[l.itemId as MaterialId];
+              if (!def) return null;
+              const qty = l.quantity ?? 1;
+              const total = l.price * qty;
+              const hint = demandHint(l.price, l.itemId as MaterialId);
+              return (
+                <div
+                  key={l.id}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(124,245,225,0.12)",
+                  }}
+                >
+                  <span className="text-lg" aria-hidden="true">{def.icon}</span>
+                  <div className="flex-1 min-w-0 text-[11px]">
+                    <span className="font-bold">
+                      {def.name} ×{qty}
+                    </span>{" "}
+                    at {formatGold(l.price)}/ea · total {formatGold(total)} ·{" "}
+                    <span style={{ color: hint.color }}>{hint.text}</span>
+                  </div>
+                  <GlowButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onCancelListing(l.id)}
+                    title="Cancel listing and return the escrowed stack"
+                  >
+                    Cancel
+                  </GlowButton>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

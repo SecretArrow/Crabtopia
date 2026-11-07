@@ -1,7 +1,9 @@
 // Crabtopia - Mining activity screen ("Crystal Mines")
-// Self-contained: uses useGame for pushToast/addGold only; mining state lives in
-// localStorage via useLocalStorage. Fully playable — every Mine click yields real
-// materials, consumes energy, and starts a node cooldown.
+// Mining's own state (energy, node cooldowns) lives in localStorage via
+// useLocalStorage; materials land in the player profile (gainMaterials)
+// and each run charges the team's stamina via the store. Fully playable —
+// every Mine click yields real materials, consumes energy, and starts a
+// node cooldown.
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -27,13 +29,10 @@ import {
   DEFAULT_MINING,
   MAX_MINING_ENERGY,
   MINING_REGEN_MS,
-  INV_KEY,
-  DEFAULT_INVENTORY,
-  addMaterials,
   type MiningState,
-  type InventoryState,
 } from "../useLocalStorage";
 import { mulberry32 } from "../../engine/rng";
+import { STAMINA_COSTS } from "../../engine/config";
 import TeamSelect from "../TeamSelect";
 import CrabRenderer from "../CrabRenderer";
 import { firstAvailableTeam } from "../../engine/teamEligibility";
@@ -62,6 +61,8 @@ export default function MiningScreen() {
   const setScreen = useGame((s) => s.setScreen);
   const pushToast = useGame((s) => s.pushToast);
   const player = useGame((s) => s.player);
+  const gainMaterials = useGame((s) => s.gainMaterials);
+  const chargeStamina = useGame((s) => s.chargeStamina);
 
   const teams = useMemo(() => player?.teams ?? [], [player]);
   const crabs = useMemo(() => player?.crabs ?? [], [player]);
@@ -99,9 +100,15 @@ export default function MiningScreen() {
     MINING_KEY,
     DEFAULT_MINING
   );
-  const [inv, setInv] = useLocalStorage<InventoryState>(
-    INV_KEY,
-    DEFAULT_INVENTORY
+  // Materials live in the player profile now (the Bazaar item market
+  // escrows/settles against them); only mining's own energy/cooldown
+  // state stays in its localStorage key.
+  const inv = useMemo(
+    () => ({
+      materials: player?.materials ?? {},
+      items: player?.items ?? {},
+    }),
+    [player]
   );
 
   // Live "now" tick so countdowns update every second.
@@ -185,6 +192,13 @@ export default function MiningScreen() {
       });
       return;
     }
+    // Stamina: the expedition team pays STAMINA_COSTS.mining per crab
+    // at the start of the run — atomic, so a refusal (exhausted or
+    // wounded member; the action toasts the reason) spends no energy
+    // and starts no cooldown.
+    if (!chargeStamina(teamCrabs.map((c) => c.id), STAMINA_COSTS.mining)) {
+      return;
+    }
     // Spend energy + start cooldown + roll drops — all up front so state is consistent.
     const rng = mulberry32(Date.now() ^ (node.id.length * 2654435761));
     const yields = applyMiningBonus(rollNodeDrops(node, rng), yieldBonus);
@@ -205,7 +219,7 @@ export default function MiningScreen() {
         ? { kelp_fiber: 1 } as Partial<Record<MaterialId, number>>
         : yields;
 
-    setInv((prev) => addMaterials(prev, finalYields));
+    gainMaterials(finalYields);
 
     // Kick off the animation overlay.
     setActiveNode(node);
@@ -327,6 +341,7 @@ export default function MiningScreen() {
             selectedTeamId={selectedTeamId}
             onSelect={setSelectedTeamId}
             requireIdle={true}
+            staminaCost={STAMINA_COSTS.mining}
             testIdPrefix="mining-team-select"
           />
           {!hasAvailableTeam && (
