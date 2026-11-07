@@ -25,8 +25,12 @@ a grid:
      (skill/hit/fall/death/defense) aliased onto the same frames so the
      existing runtime resolves v2 sheets with zero special cases.
 
-Adding a class later (warden, gildclaw): generate its 3 sheets, add a
-manifest entry, re-run this script. Nothing else changes.
+All 8 classes are covered. Adding a class later: generate its 3
+sheets, add a manifest entry, re-run this script. Nothing else
+changes. Manifest authors: verify every referenced pose against a
+per-pose dump first — segmentation can sever shiny detached parts
+(a claw tip, a lone claw) into fragment poses that must never be
+referenced (warden loco:9 / loco:15 / action:9, master:15).
 
 Usage:
   python3 scripts/build_sprite_atlas_v2.py inspect   # annotated pose maps

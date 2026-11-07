@@ -2056,7 +2056,7 @@
     ]
   },
   "shellmender": {
-    "frames": 54,
+    "frames": 53,
     "frameOrder": [
       "loco:0",
       "loco:1",
@@ -2080,7 +2080,6 @@
       "loco:14",
       "loco:15",
       "loco:16",
-      "loco:17",
       "master:10",
       "master:11",
       "loco:19",
@@ -2253,193 +2252,966 @@
       {
         "index": 22,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.95,
+        "alphaCoveragePct": 35.13,
         "used": true
       },
       {
         "index": 23,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.13,
+        "alphaCoveragePct": 37.75,
         "used": true
       },
       {
         "index": 24,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 37.75,
+        "alphaCoveragePct": 31.99,
         "used": true
       },
       {
         "index": 25,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 31.99,
+        "alphaCoveragePct": 31.5,
         "used": true
       },
       {
         "index": 26,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 31.5,
+        "alphaCoveragePct": 35.69,
         "used": true
       },
       {
         "index": 27,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.69,
+        "alphaCoveragePct": 38.65,
         "used": true
       },
       {
         "index": 28,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 38.65,
+        "alphaCoveragePct": 38.35,
         "used": true
       },
       {
         "index": 29,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 38.35,
+        "alphaCoveragePct": 38.14,
         "used": true
       },
       {
         "index": 30,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 38.14,
+        "alphaCoveragePct": 36.26,
         "used": true
       },
       {
         "index": 31,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 36.26,
+        "alphaCoveragePct": 37.11,
         "used": true
       },
       {
         "index": 32,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 37.11,
+        "alphaCoveragePct": 37.77,
         "used": true
       },
       {
         "index": 33,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 37.77,
+        "alphaCoveragePct": 34.18,
         "used": true
       },
       {
         "index": 34,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 34.18,
+        "alphaCoveragePct": 34.74,
         "used": true
       },
       {
         "index": 35,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 34.74,
+        "alphaCoveragePct": 35.46,
         "used": true
       },
       {
         "index": 36,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.46,
+        "alphaCoveragePct": 33.82,
         "used": true
       },
       {
         "index": 37,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 33.82,
+        "alphaCoveragePct": 32.41,
         "used": true
       },
       {
         "index": 38,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 32.41,
+        "alphaCoveragePct": 21.54,
         "used": true
       },
       {
         "index": 39,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 21.54,
+        "alphaCoveragePct": 31.12,
         "used": true
       },
       {
         "index": 40,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 31.12,
+        "alphaCoveragePct": 36.13,
         "used": true
       },
       {
         "index": 41,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 36.13,
+        "alphaCoveragePct": 34.14,
         "used": true
       },
       {
         "index": 42,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 34.14,
+        "alphaCoveragePct": 35.16,
         "used": true
       },
       {
         "index": 43,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.16,
+        "alphaCoveragePct": 35.7,
         "used": true
       },
       {
         "index": 44,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.7,
+        "alphaCoveragePct": 34.07,
         "used": true
       },
       {
         "index": 45,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 34.07,
+        "alphaCoveragePct": 35.6,
         "used": true
       },
       {
         "index": 46,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.6,
+        "alphaCoveragePct": 31.22,
         "used": true
       },
       {
         "index": 47,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 31.22,
+        "alphaCoveragePct": 30.8,
         "used": true
       },
       {
         "index": 48,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 30.8,
+        "alphaCoveragePct": 23.85,
         "used": true
       },
       {
         "index": 49,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 23.85,
+        "alphaCoveragePct": 28.92,
         "used": true
       },
       {
         "index": 50,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 28.92,
+        "alphaCoveragePct": 27.85,
         "used": true
       },
       {
         "index": 51,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 27.85,
+        "alphaCoveragePct": 46.86,
         "used": true
       },
       {
         "index": 52,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 46.86,
+        "alphaCoveragePct": 35.41,
         "used": true
       },
       {
         "index": 53,
         "cornerAlphaMax": 0,
-        "alphaCoveragePct": 35.41,
+        "alphaCoveragePct": 0.0,
+        "used": false
+      }
+    ]
+  },
+  "warden": {
+    "frames": 49,
+    "frameOrder": [
+      "loco:0",
+      "loco:1",
+      "loco:2",
+      "master:0",
+      "master:1",
+      "master:2",
+      "loco:22",
+      "loco:21",
+      "loco:6",
+      "loco:7",
+      "loco:8",
+      "loco:10",
+      "loco:11",
+      "loco:12",
+      "loco:13",
+      "loco:14",
+      "loco:16",
+      "loco:17",
+      "master:10",
+      "master:11",
+      "loco:18",
+      "loco:20",
+      "action:0",
+      "action:1",
+      "action:2",
+      "action:3",
+      "action:4",
+      "action:5",
+      "master:12",
+      "master:13",
+      "master:14",
+      "action:10",
+      "master:16",
+      "action:12",
+      "action:13",
+      "action:14",
+      "action:15",
+      "action:17",
+      "action:18",
+      "action:19",
+      "master:18",
+      "action:16",
+      "master:19",
+      "action:22",
+      "action:23",
+      "master:20",
+      "loco:23",
+      "master:21",
+      "action:6"
+    ],
+    "cellWidth": 407,
+    "cellHeight": 353,
+    "cornerAlphaMax": 0,
+    "minCoveragePct": 17.28,
+    "validationFrames": [
+      {
+        "index": 0,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.89,
+        "used": true
+      },
+      {
+        "index": 1,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.85,
+        "used": true
+      },
+      {
+        "index": 2,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 21.87,
+        "used": true
+      },
+      {
+        "index": 3,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 27.0,
+        "used": true
+      },
+      {
+        "index": 4,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 27.02,
+        "used": true
+      },
+      {
+        "index": 5,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.99,
+        "used": true
+      },
+      {
+        "index": 6,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 27.44,
+        "used": true
+      },
+      {
+        "index": 7,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.72,
+        "used": true
+      },
+      {
+        "index": 8,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.55,
+        "used": true
+      },
+      {
+        "index": 9,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.88,
+        "used": true
+      },
+      {
+        "index": 10,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 27.33,
+        "used": true
+      },
+      {
+        "index": 11,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.39,
+        "used": true
+      },
+      {
+        "index": 12,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.37,
+        "used": true
+      },
+      {
+        "index": 13,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 21.85,
+        "used": true
+      },
+      {
+        "index": 14,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.46,
+        "used": true
+      },
+      {
+        "index": 15,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.49,
+        "used": true
+      },
+      {
+        "index": 16,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.95,
+        "used": true
+      },
+      {
+        "index": 17,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 28.92,
+        "used": true
+      },
+      {
+        "index": 18,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.57,
+        "used": true
+      },
+      {
+        "index": 19,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 32.35,
+        "used": true
+      },
+      {
+        "index": 20,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.69,
+        "used": true
+      },
+      {
+        "index": 21,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 20.14,
+        "used": true
+      },
+      {
+        "index": 22,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.28,
+        "used": true
+      },
+      {
+        "index": 23,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.7,
+        "used": true
+      },
+      {
+        "index": 24,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 23.72,
+        "used": true
+      },
+      {
+        "index": 25,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 27.56,
+        "used": true
+      },
+      {
+        "index": 26,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.5,
+        "used": true
+      },
+      {
+        "index": 27,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.34,
+        "used": true
+      },
+      {
+        "index": 28,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.32,
+        "used": true
+      },
+      {
+        "index": 29,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.59,
+        "used": true
+      },
+      {
+        "index": 30,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.88,
+        "used": true
+      },
+      {
+        "index": 31,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.28,
+        "used": true
+      },
+      {
+        "index": 32,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 30.18,
+        "used": true
+      },
+      {
+        "index": 33,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 28.19,
+        "used": true
+      },
+      {
+        "index": 34,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 17.28,
+        "used": true
+      },
+      {
+        "index": 35,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 22.45,
+        "used": true
+      },
+      {
+        "index": 36,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.31,
+        "used": true
+      },
+      {
+        "index": 37,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 21.42,
+        "used": true
+      },
+      {
+        "index": 38,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.73,
+        "used": true
+      },
+      {
+        "index": 39,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 23.05,
+        "used": true
+      },
+      {
+        "index": 40,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.51,
+        "used": true
+      },
+      {
+        "index": 41,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 18.87,
+        "used": true
+      },
+      {
+        "index": 42,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.28,
+        "used": true
+      },
+      {
+        "index": 43,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.13,
+        "used": true
+      },
+      {
+        "index": 44,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 21.04,
+        "used": true
+      },
+      {
+        "index": 45,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 23.07,
+        "used": true
+      },
+      {
+        "index": 46,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 25.14,
+        "used": true
+      },
+      {
+        "index": 47,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 28.99,
+        "used": true
+      },
+      {
+        "index": 48,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 29.34,
+        "used": true
+      },
+      {
+        "index": 49,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 0.0,
+        "used": false
+      },
+      {
+        "index": 50,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 0.0,
+        "used": false
+      },
+      {
+        "index": 51,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 0.0,
+        "used": false
+      },
+      {
+        "index": 52,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 0.0,
+        "used": false
+      },
+      {
+        "index": 53,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 0.0,
+        "used": false
+      }
+    ]
+  },
+  "gildclaw": {
+    "frames": 54,
+    "frameOrder": [
+      "loco:0",
+      "loco:1",
+      "loco:2",
+      "loco:3",
+      "loco:4",
+      "loco:5",
+      "master:0",
+      "master:1",
+      "master:2",
+      "loco:22",
+      "loco:21",
+      "loco:6",
+      "loco:7",
+      "loco:8",
+      "loco:9",
+      "loco:10",
+      "loco:11",
+      "loco:12",
+      "loco:13",
+      "loco:14",
+      "loco:15",
+      "loco:16",
+      "loco:17",
+      "master:10",
+      "master:11",
+      "loco:18",
+      "loco:20",
+      "action:0",
+      "action:1",
+      "action:2",
+      "action:3",
+      "action:4",
+      "action:5",
+      "action:6",
+      "action:7",
+      "action:8",
+      "action:10",
+      "master:16",
+      "action:12",
+      "action:13",
+      "action:15",
+      "action:14",
+      "action:16",
+      "action:18",
+      "action:19",
+      "master:18",
+      "action:21",
+      "master:19",
+      "action:22",
+      "action:23",
+      "master:20",
+      "loco:23",
+      "master:21",
+      "master:14"
+    ],
+    "cellWidth": 358,
+    "cellHeight": 337,
+    "cornerAlphaMax": 0,
+    "minCoveragePct": 18.03,
+    "validationFrames": [
+      {
+        "index": 0,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.81,
+        "used": true
+      },
+      {
+        "index": 1,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.81,
+        "used": true
+      },
+      {
+        "index": 2,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.74,
+        "used": true
+      },
+      {
+        "index": 3,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.43,
+        "used": true
+      },
+      {
+        "index": 4,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.41,
+        "used": true
+      },
+      {
+        "index": 5,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.77,
+        "used": true
+      },
+      {
+        "index": 6,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 37.14,
+        "used": true
+      },
+      {
+        "index": 7,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 37.19,
+        "used": true
+      },
+      {
+        "index": 8,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 37.19,
+        "used": true
+      },
+      {
+        "index": 9,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 37.62,
+        "used": true
+      },
+      {
+        "index": 10,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.21,
+        "used": true
+      },
+      {
+        "index": 11,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.31,
+        "used": true
+      },
+      {
+        "index": 12,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.24,
+        "used": true
+      },
+      {
+        "index": 13,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.77,
+        "used": true
+      },
+      {
+        "index": 14,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.83,
+        "used": true
+      },
+      {
+        "index": 15,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.23,
+        "used": true
+      },
+      {
+        "index": 16,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.59,
+        "used": true
+      },
+      {
+        "index": 17,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 30.42,
+        "used": true
+      },
+      {
+        "index": 18,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.36,
+        "used": true
+      },
+      {
+        "index": 19,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.81,
+        "used": true
+      },
+      {
+        "index": 20,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 30.8,
+        "used": true
+      },
+      {
+        "index": 21,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 30.73,
+        "used": true
+      },
+      {
+        "index": 22,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.36,
+        "used": true
+      },
+      {
+        "index": 23,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.53,
+        "used": true
+      },
+      {
+        "index": 24,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.03,
+        "used": true
+      },
+      {
+        "index": 25,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.89,
+        "used": true
+      },
+      {
+        "index": 26,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 30.88,
+        "used": true
+      },
+      {
+        "index": 27,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.9,
+        "used": true
+      },
+      {
+        "index": 28,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 39.82,
+        "used": true
+      },
+      {
+        "index": 29,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 39.65,
+        "used": true
+      },
+      {
+        "index": 30,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.21,
+        "used": true
+      },
+      {
+        "index": 31,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.73,
+        "used": true
+      },
+      {
+        "index": 32,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 35.28,
+        "used": true
+      },
+      {
+        "index": 33,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.9,
+        "used": true
+      },
+      {
+        "index": 34,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 38.37,
+        "used": true
+      },
+      {
+        "index": 35,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.1,
+        "used": true
+      },
+      {
+        "index": 36,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.36,
+        "used": true
+      },
+      {
+        "index": 37,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 38.82,
+        "used": true
+      },
+      {
+        "index": 38,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 32.65,
+        "used": true
+      },
+      {
+        "index": 39,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 18.03,
+        "used": true
+      },
+      {
+        "index": 40,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 32.63,
+        "used": true
+      },
+      {
+        "index": 41,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.8,
+        "used": true
+      },
+      {
+        "index": 42,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 33.47,
+        "used": true
+      },
+      {
+        "index": 43,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.73,
+        "used": true
+      },
+      {
+        "index": 44,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 31.97,
+        "used": true
+      },
+      {
+        "index": 45,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 36.03,
+        "used": true
+      },
+      {
+        "index": 46,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 34.76,
+        "used": true
+      },
+      {
+        "index": 47,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 32.1,
+        "used": true
+      },
+      {
+        "index": 48,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 29.8,
+        "used": true
+      },
+      {
+        "index": 49,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 29.83,
+        "used": true
+      },
+      {
+        "index": 50,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 26.87,
+        "used": true
+      },
+      {
+        "index": 51,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 28.47,
+        "used": true
+      },
+      {
+        "index": 52,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 37.77,
+        "used": true
+      },
+      {
+        "index": 53,
+        "cornerAlphaMax": 0,
+        "alphaCoveragePct": 33.26,
         "used": true
       }
     ]

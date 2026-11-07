@@ -1225,7 +1225,7 @@
             "loco:14",
             "loco:15",
             "loco:16",
-            "loco:17"
+            "loco:15"
           ],
           "fps": 13,
           "loop": "loop"
@@ -1376,6 +1376,458 @@
         "fall": {
           "frames": [
             "action:20",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      }
+    },
+    "warden": {
+      "sheets": {
+        "master": "media-generation-spritesheet-warden-v3-neat-0-98693a8b-5d3d-4355-868e-cf49fe50cff3.webp",
+        "loco": "media-generation-spritesheet-warden-locomotion-0-9de9927d-c77c-47e4-a7ea-93abfc7fe32e.webp",
+        "action": "media-generation-spritesheet-warden-action-0-b102a4cb-8ffc-467f-ad38-45348c4f9c7a.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:1",
+            "loco:2",
+            "loco:0"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:1"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:22",
+            "loco:21"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:10",
+            "loco:11",
+            "loco:8"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:16",
+            "loco:17",
+            "loco:14"
+          ],
+          "fps": 14,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "master:10",
+            "master:11"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:18",
+            "loco:6"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:20",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4",
+            "action:5"
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "3": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "master:12",
+            "master:13",
+            "master:14"
+          ],
+          "fps": 15,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:10",
+            "master:16"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:12",
+            "action:13",
+            "action:14"
+          ],
+          "fps": 12,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:14",
+            "action:15",
+            "action:17"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "action:16",
+            "action:19",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:20",
+            "loco:23"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:21"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "action:6"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:10",
+            "master:16"
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "hit": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "action:16",
+            "action:19",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "death": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        }
+      }
+    },
+    "gildclaw": {
+      "sheets": {
+        "master": "media-generation-spritesheet-gildclaw-v3-neat-0-496d535d-13b7-4604-ae59-fa7de77faa6d.webp",
+        "loco": "media-generation-spritesheet-gildclaw-locomotio-0-cde114dd-6de4-4039-9d06-23e5343adaea.webp",
+        "action": "media-generation-spritesheet-gildclaw-action-0-d411aae3-3e9e-427b-aa16-68dfc81f376f.webp"
+      },
+      "clips": {
+        "idle": {
+          "frames": [
+            "loco:0",
+            "loco:1",
+            "loco:2",
+            "loco:3",
+            "loco:4",
+            "loco:5"
+          ],
+          "fps": 6,
+          "loop": "loop"
+        },
+        "idleAlt1": {
+          "frames": [
+            "master:0",
+            "master:1",
+            "master:2",
+            "master:1"
+          ],
+          "fps": 4,
+          "loop": "loop"
+        },
+        "idleAlt2": {
+          "frames": [
+            "loco:22",
+            "loco:21"
+          ],
+          "fps": 3,
+          "loop": "pingpong"
+        },
+        "walk": {
+          "frames": [
+            "loco:6",
+            "loco:7",
+            "loco:8",
+            "loco:9",
+            "loco:10",
+            "loco:11"
+          ],
+          "fps": 9,
+          "loop": "loop"
+        },
+        "run": {
+          "frames": [
+            "loco:12",
+            "loco:13",
+            "loco:14",
+            "loco:15",
+            "loco:16",
+            "loco:17"
+          ],
+          "fps": 14,
+          "loop": "loop"
+        },
+        "turn": {
+          "frames": [
+            "master:10",
+            "master:11"
+          ],
+          "fps": 8,
+          "loop": "once"
+        },
+        "start": {
+          "frames": [
+            "loco:18",
+            "loco:6"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stop": {
+          "frames": [
+            "loco:20",
+            "loco:0"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "attack": {
+          "frames": [
+            "action:0",
+            "action:1",
+            "action:2",
+            "action:3",
+            "action:4",
+            "action:5"
+          ],
+          "fps": 14,
+          "loop": "once",
+          "events": {
+            "4": "hitMoment"
+          }
+        },
+        "combo": {
+          "frames": [
+            "action:6",
+            "action:7",
+            "action:8"
+          ],
+          "fps": 15,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment",
+            "2": "hitMoment"
+          }
+        },
+        "cast": {
+          "frames": [
+            "action:10",
+            "master:16"
+          ],
+          "fps": 11,
+          "loop": "once"
+        },
+        "dodge": {
+          "frames": [
+            "action:12",
+            "action:13",
+            "action:15"
+          ],
+          "fps": 12,
+          "loop": "once"
+        },
+        "jump": {
+          "frames": [
+            "action:15",
+            "action:14",
+            "action:16"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "hurt": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "stagger": {
+          "frames": [
+            "action:19",
+            "action:21",
+            "master:19"
+          ],
+          "fps": 6,
+          "loop": "once"
+        },
+        "defeat": {
+          "frames": [
+            "action:22",
+            "action:23"
+          ],
+          "fps": 7,
+          "loop": "once"
+        },
+        "sleep": {
+          "frames": [
+            "master:20",
+            "loco:23"
+          ],
+          "fps": 2,
+          "loop": "pingpong"
+        },
+        "victory": {
+          "frames": [
+            "master:21"
+          ],
+          "fps": 5,
+          "loop": "loop"
+        },
+        "defense": {
+          "frames": [
+            "master:14"
+          ],
+          "fps": 1,
+          "loop": "loop"
+        },
+        "skill": {
+          "frames": [
+            "action:10",
+            "master:16"
+          ],
+          "fps": 11,
+          "loop": "once",
+          "events": {
+            "1": "hitMoment"
+          }
+        },
+        "hit": {
+          "frames": [
+            "action:18",
+            "action:19",
+            "master:18"
+          ],
+          "fps": 10,
+          "loop": "once"
+        },
+        "fall": {
+          "frames": [
+            "action:19",
             "action:21",
             "master:19"
           ],
