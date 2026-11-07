@@ -19,6 +19,13 @@ import CraftingScreen from "./activities/CraftingScreen";
 import InventoryScreen from "./activities/InventoryScreen";
 import NotificationCenterModal from "./NotificationCenterModal";
 import TutorialGuide from "./TutorialGuide";
+import AnimatedNumber from "./AnimatedNumber";
+import {
+  applySettingsPrefs,
+  loadSettingsPrefs,
+  saveSettingsPrefs,
+  type SettingsPrefs,
+} from "./settingsPrefs";
 import { formatGold, GoldIcon, PlanktonField } from "./ui";
 
 const NAV_ITEMS = [
@@ -65,6 +72,15 @@ export default function GameShell() {
   const [notifOpen, setNotifOpen] = useState(false);
   // mock unread notification count (would come from store in production)
   const unreadNotifs = 3;
+
+  // Apply persisted accessibility prefs (Reduce motion / High contrast)
+  // to <html> once on mount — the Settings toggles update them live.
+  useEffect(() => {
+    applySettingsPrefs(
+      loadSettingsPrefs(window.localStorage),
+      document.documentElement,
+    );
+  }, []);
 
   // tick timers every second
   useEffect(() => {
@@ -178,7 +194,7 @@ export default function GameShell() {
             <div className="min-w-0">
               <div className="text-[9px] opacity-70 uppercase tracking-wide leading-tight">Gold</div>
               <div className="text-base font-bold font-display leading-tight" style={{ color: "#FFD166" }}>
-                {formatGold(player.gold)}
+                <AnimatedNumber value={player.gold} format={formatGold} />
               </div>
             </div>
           </div>
@@ -300,7 +316,7 @@ export default function GameShell() {
             }}>
               <GoldIcon size={16} />
               <span className="text-xs font-bold font-display" style={{ color: "#FFD166" }}>
-                {formatGold(player.gold)}
+                <AnimatedNumber value={player.gold} format={formatGold} />
               </span>
             </div>
             <button
@@ -421,13 +437,25 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   const resetGame = useGame((s) => s.resetGame);
   const [musicOn, setMusicOn] = useState(true);
   const [sfxOn, setSfxOn] = useState(true);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
+  // Accessibility prefs are REAL: persisted outside the game save and
+  // applied to <html> immediately (see settingsPrefs.ts).
+  const [prefs, setPrefs] = useState<SettingsPrefs>(() =>
+    loadSettingsPrefs(typeof window !== "undefined" ? window.localStorage : null),
+  );
+  const updatePrefs = (next: SettingsPrefs) => {
+    setPrefs(next);
+    applySettingsPrefs(next, document.documentElement);
+    saveSettingsPrefs(window.localStorage, next);
+  };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div
+      className="modal-backdrop-enter fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="relative w-full max-w-md rounded-2xl overflow-hidden p-5 max-h-[88vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
         style={{
           background: "linear-gradient(180deg, #06122B 0%, #04101F 100%)",
           border: "1px solid rgba(124,245,225,0.30)",
@@ -446,8 +474,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         <div className="space-y-2">
           <SettingsRow label="Music" desc="Ambient ocean pads and faction motifs" on={musicOn} onToggle={() => setMusicOn((v) => !v)} />
           <SettingsRow label="Sound effects" desc="Claw clacks, coin rain, egg shimmer" on={sfxOn} onToggle={() => setSfxOn((v) => !v)} />
-          <SettingsRow label="Reduce motion" desc="Fewer particles and animations" on={reduceMotion} onToggle={() => setReduceMotion((v) => !v)} />
-          <SettingsRow label="High contrast" desc="Boost text and border contrast" on={highContrast} onToggle={() => setHighContrast((v) => !v)} />
+          <SettingsRow label="Reduce motion" desc="Fewer particles and animations" on={prefs.reduceMotion} onToggle={() => updatePrefs({ ...prefs, reduceMotion: !prefs.reduceMotion })} />
+          <SettingsRow label="High contrast" desc="Boost text and border contrast" on={prefs.highContrast} onToggle={() => updatePrefs({ ...prefs, highContrast: !prefs.highContrast })} />
         </div>
 
         <div className="mt-4 pt-3 border-t border-white/10 space-y-2 text-xs">

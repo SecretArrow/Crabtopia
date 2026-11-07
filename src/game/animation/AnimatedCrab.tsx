@@ -64,7 +64,10 @@ export function getFxDef(name: string) {
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
+  // The in-game Settings "Reduce motion" toggle mirrors the OS setting
+  // as a class on <html> (see render/settingsPrefs.ts).
+  return document.documentElement.classList.contains("reduce-motion");
 }
 
 const FADE_MS = 110;
