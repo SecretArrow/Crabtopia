@@ -236,6 +236,57 @@ describe("calculateRewards", () => {
   });
 });
 
+describe("calculateRewards — exact doc-comment values (audit 2026-11-07)", () => {
+  // Build a state directly: winner forced, survivors controlled. The
+  // reward formula must match its own documentation EXACTLY:
+  //   gold = entryCost + 50..245 (enemy avg level 1..50)
+  //   XP   = round(enemyAvgLevel * 15) per surviving player crab
+  //   30% chance of 1-2 materials; defeat = nothing.
+  function rewardState(enemyLevel: number, survivors: number, seed: number) {
+    const p = [0, 1, 2, 3, 4].map((i) =>
+      generateCrab({ level: 10, seed: 3100 + i })
+    );
+    const e = [0, 1, 2, 3, 4].map((i) =>
+      generateCrab({ level: enemyLevel, seed: 3200 + i })
+    );
+    const state = initBattle(p, e, seed);
+    state.winner = "player";
+    state.player.forEach((c, i) => {
+      c.isDefeated = i >= survivors;
+    });
+    return state;
+  }
+
+  it("gold bonus is exactly +50 at enemy avg level 1 and +245 at 50", () => {
+    expect(calculateRewards(rewardState(1, 5, 11), 100).goldReward).toBe(150);
+    expect(calculateRewards(rewardState(50, 5, 12), 100).goldReward).toBe(345);
+    expect(calculateRewards(rewardState(50, 5, 13), 0).goldReward).toBe(245);
+  });
+
+  it("XP is round(avg level x 15) per surviving crab", () => {
+    // avg 10 -> 150 per survivor; 3 survivors -> 450
+    expect(calculateRewards(rewardState(10, 3, 14), 100).xpReward).toBe(450);
+    // avg 1 -> 15 per survivor; 5 survivors -> 75
+    expect(calculateRewards(rewardState(1, 5, 15), 100).xpReward).toBe(75);
+  });
+
+  it("material drops land near the documented 30% (400 seeded states)", () => {
+    let drops = 0;
+    let totalItems = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const r = calculateRewards(rewardState(10, 5, 10000 + seed), 100);
+      if (r.itemsFound.length > 0) drops++;
+      totalItems += r.itemsFound.reduce((s, it) => s + it.count, 0);
+    }
+    const rate = drops / 400;
+    expect(rate).toBeGreaterThan(0.23);
+    expect(rate).toBeLessThan(0.37);
+    // When a drop happens it is 1-2 items, so totals stay bounded.
+    expect(totalItems).toBeGreaterThanOrEqual(drops);
+    expect(totalItems).toBeLessThanOrEqual(drops * 2);
+  });
+});
+
 describe("status effects in the sim", () => {
   it("warden freeze skills carry a 2-round base (converted to 2000 battle-ms by the fairness layer)", () => {
     const skills = getSkillsForClass("warden");
