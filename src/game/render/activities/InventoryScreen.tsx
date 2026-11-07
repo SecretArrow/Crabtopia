@@ -117,7 +117,7 @@ export default function InventoryScreen() {
       setInv((prev) => consumeItem(prev, recipe.id, 1));
       pushToast({
         title: `${recipe.name} armed!`,
-        description: `+${e.percent}% drop rate for next ${e.charges} explorations.`,
+        description: `+1 bonus material from each of the next ${e.charges} treasure chests.`,
         variant: "success",
       });
       return;
@@ -197,7 +197,7 @@ export default function InventoryScreen() {
             </span>
             {buffs.dropRate ? (
               <span style={{ color: "#7CF5E1" }}>
-                🍀 +{buffs.dropRate.percent}% drop ({buffs.dropRate.charges})
+                🍀 +1 material/chest ({buffs.dropRate.charges} left)
               </span>
             ) : null}
             {buffs.legendaryChance ? (

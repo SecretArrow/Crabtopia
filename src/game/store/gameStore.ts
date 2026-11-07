@@ -19,7 +19,7 @@ import {
   FormationPresetId,
 } from "../types";
 import { generateCrab } from "../engine/crabs";
-import { CONFIG, QUESTS } from "../engine/config";
+import { CONFIG, QUESTS, TEAM_SLOT_COSTS } from "../engine/config";
 import { simulateBattle, BattleSide, TACTIC_CARDS } from "../engine/battle";
 import { crabBaseBP, teamBP } from "../engine/bp";
 import {
@@ -500,13 +500,13 @@ export const useGame = create<GameState>()(
         const id = makeId("team");
         const player = get().player;
         if (!player) return "";
-        if (player.teams.length >= 7) {
-          get().pushToast({ title: "Team limit reached (7).", variant: "error" });
+        if (player.teams.length >= 5 + TEAM_SLOT_COSTS.length) {
+          get().pushToast({ title: `Team limit reached (${5 + TEAM_SLOT_COSTS.length}).`, variant: "error" });
           return "";
         }
-        // extra slots beyond 5 cost gold
+        // extra slots beyond 5 cost gold (schedule: engine/config)
         if (player.teams.length >= 5) {
-          const cost = [50000, 120000][player.teams.length - 5];
+          const cost = TEAM_SLOT_COSTS[player.teams.length - 5];
           if (player.gold < cost) {
             get().pushToast({ title: `Need ${cost} GOLD for extra team slot.`, variant: "error" });
             return "";

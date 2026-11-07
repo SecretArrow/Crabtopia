@@ -29,7 +29,12 @@ export const BREED_COST_SCHEDULE = [
   2500, 8000, 18000, 35000, 70000, // 1st through 5th breed
 ];
 
-export const TEAM_SLOT_COSTS = [50000, 120000, 250000, 500000]; // slots 4-7
+// Paid team slots: the first 5 team slots are free; slot 6 costs
+// 50,000 and slot 7 costs 120,000 (team cap = 5 + this list's length).
+// This is the single source — the store and TeamsScreen both import it.
+// (It previously declared four prices "for slots 4-7" that no code
+// imported and that contradicted the live 5-free-slots behavior.)
+export const TEAM_SLOT_COSTS = [50000, 120000];
 
 export const QUESTS = [
   {

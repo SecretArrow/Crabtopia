@@ -205,7 +205,7 @@ export const RECIPES: Record<ItemId, RecipeDef> = {
     icon: "🍀",
     rarity: "rare",
     description:
-      "A gilded talisman that tilts fortune. +5% drop rate for the next 3 explorations.",
+      "A gilded talisman that tilts fortune. +1 bonus material from each of the next 3 treasure chests.",
     materials: mat({ gold_nugget: 2, crystal_dust: 1 }),
     effect: { type: "drop_rate", percent: 5, charges: 3 },
   },

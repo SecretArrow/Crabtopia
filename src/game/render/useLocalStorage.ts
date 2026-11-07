@@ -76,7 +76,9 @@ export interface ExplorationState {
 }
 
 export interface BuffsState {
-  // Lucky Charm: +drop rate for next N explorations
+  // Lucky Charm: +1 bonus material per treasure chest for the next N
+  // chests (charges are spent per chest in ExplorationScreen; the
+  // legacy `percent` field is carried in the data but drives nothing)
   dropRate?: { percent: number; charges: number };
   // Legendary Lure: +legendary chance for next breed
   legendaryChance?: { percent: number; charges: number };

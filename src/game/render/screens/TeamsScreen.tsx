@@ -9,6 +9,7 @@ import { Crab, FormationPresetId } from "../../types";
 import { CLASSES } from "../../content/classes";
 import { crabBaseBP, teamBP, factionBonus, classSynergy, formatBP, positioningBonus } from "../../engine/bp";
 import { TEAM_SIZE, toTeamSlots, validateTeam } from "../../engine/teams";
+import { TEAM_SLOT_COSTS } from "../../engine/config";
 import {
   FORMATION_PRESET_LIST,
   ROWS,
@@ -677,7 +678,7 @@ export default function TeamsScreen() {
               {player.teams.length < 5
                 ? "Free slot available."
                 : `Extra slot cost: ${
-                    [50000, 120000][player.teams.length - 5]
+                    TEAM_SLOT_COSTS[player.teams.length - 5]
                   } GOLD`}
             </div>
             <input

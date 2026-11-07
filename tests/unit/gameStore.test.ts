@@ -9,6 +9,7 @@
 //    shellwardenLevel always matches the XP curve
 import { describe, it, expect, beforeEach } from "vitest";
 import { useGame, NPC_CRAB_CACHE } from "../../src/game/store/gameStore";
+import { TEAM_SLOT_COSTS } from "../../src/game/engine/config";
 import { deriveFormationForCrabs } from "../../src/game/engine/formation";
 import { generateCrab } from "../../src/game/engine/crabs";
 import type { Crab } from "../../src/game/types";
@@ -218,6 +219,28 @@ describe("shellwarden XP / level consistency", () => {
     s.hatchEggNow("egg_test_xp"); // +150 XP -> 550 total
     expect(player().shellwardenXp).toBe(550);
     expect(player().shellwardenLevel).toBe(2);
+  });
+});
+
+describe("team slot pricing (single source: TEAM_SLOT_COSTS)", () => {
+  it("5 free slots, then the config schedule, then a hard cap", () => {
+    const s = useGame.getState();
+    setPlayer({ gold: 1000000 });
+    // Player starts with 1 team; slots 2-5 are free.
+    for (let i = 0; i < 4; i++) {
+      expect(s.createTeam(`T${i}`)).not.toBe("");
+    }
+    expect(player().teams).toHaveLength(5);
+    expect(player().gold).toBe(1000000);
+    // Slot 6 and 7 cost exactly the config schedule.
+    expect(TEAM_SLOT_COSTS).toEqual([50000, 120000]);
+    expect(s.createTeam("T6")).not.toBe("");
+    expect(player().gold).toBe(1000000 - TEAM_SLOT_COSTS[0]);
+    expect(s.createTeam("T7")).not.toBe("");
+    expect(player().gold).toBe(1000000 - TEAM_SLOT_COSTS[0] - TEAM_SLOT_COSTS[1]);
+    // Slot 8 does not exist.
+    expect(s.createTeam("T8")).toBe("");
+    expect(player().teams).toHaveLength(7);
   });
 });
 
