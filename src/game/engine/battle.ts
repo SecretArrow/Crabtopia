@@ -78,7 +78,14 @@ function tacticEffectiveness(myCard: TacticCardId | undefined, oppCard: TacticCa
   const card = TACTIC_CARDS[myCard];
   let mod = card.selfMod;
   if (oppCard && card.counter === oppCard) mod += 0.04;
-  return Math.min(mod, 0.12);
+  // The opposing card's oppMod suppresses MY effectiveness. It was
+  // declared in TACTIC_CARDS (ambush -0.02, siphon -0.03, bait -0.04,
+  // counter -0.03) but never applied anywhere — dead data that made the
+  // printed card strengths wrong (Ambush advertises "+8%", which is
+  // exactly its +6% self and -2% opponent swing combined).
+  if (oppCard) mod += TACTIC_CARDS[oppCard].oppMod;
+  // Header contract: capped at +/- 12% — the floor was missing too.
+  return Math.max(-0.12, Math.min(mod, 0.12));
 }
 
 export function simulateBattle(
@@ -221,16 +228,26 @@ export function simulateBattle(
         }
         if (healIdx >= 0) {
           const heal = Math.round(actor.crab.stats.skill * 1.2);
-          allyHP[healIdx] += heal;
-          events.push({
-            turn,
-            actorId: actor.crab.id,
-            actorSide: actor.side,
-            targetId: allyCrabs[healIdx].id,
-            targetSide: actor.side,
-            heal,
-            message: `${actor.crab.name} mends ${allyCrabs[healIdx].name} for ${heal} HP.`,
-          });
+          // Cap at max HP (stats.hp + level * 20, the same pool the HP
+          // arrays start from): the uncapped heal pushed full-HP allies
+          // above their maximum. The event reports the amount ACTUALLY
+          // healed and is skipped when nothing was healed. The heal roll
+          // above is still consumed, so the RNG stream is unchanged.
+          const target = allyCrabs[healIdx];
+          const maxHP = target.stats.hp + target.level * 20;
+          const actualHeal = Math.min(heal, Math.max(0, maxHP - allyHP[healIdx]));
+          if (actualHeal > 0) {
+            allyHP[healIdx] += actualHeal;
+            events.push({
+              turn,
+              actorId: actor.crab.id,
+              actorSide: actor.side,
+              targetId: target.id,
+              targetSide: actor.side,
+              heal: actualHeal,
+              message: `${actor.crab.name} mends ${target.name} for ${actualHeal} HP.`,
+            });
+          }
         }
       }
 
