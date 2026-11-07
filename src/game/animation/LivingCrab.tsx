@@ -44,6 +44,7 @@ export default function LivingCrab({
       speed={speed}
       clocked={clocked}
       facing={facing}
+      seedKey={crab.id}
       onAnimEvent={onAnimEvent}
     />
   );

@@ -26,6 +26,8 @@ export interface SpriteSheetDef {
   frameHeight: number;
   cols: number;
   rows: number;
+  /** Atlas v2 rich sheet (named clips beyond the state set). */
+  rich?: boolean;
   animations: Record<string, AnimationDef>;
 }
 

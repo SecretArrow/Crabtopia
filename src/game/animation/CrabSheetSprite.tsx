@@ -24,6 +24,8 @@ export interface CrabSheetSpriteProps extends CrabSheetIdentity {
   /** Run on the shared BattleClock (arena battles only). */
   clocked?: boolean;
   facing?: "right" | "left";
+  /** Idle-variation seed (usually the crab's id) — groups never sync. */
+  seedKey?: string;
   onAnimEvent?: (name: string, state: AnimState) => void;
 }
 
@@ -35,6 +37,7 @@ export default function CrabSheetSprite({
   speed = 1,
   clocked = false,
   facing = "right",
+  seedKey,
   onAnimEvent,
 }: CrabSheetSpriteProps): React.ReactNode {
   const desc = resolveSheetDescriptor({ classId, faction });
@@ -54,6 +57,7 @@ export default function CrabSheetSprite({
         size={size}
         speed={speed}
         clocked={clocked}
+        seedKey={seedKey}
         onAnimEvent={onAnimEvent}
       />
     </div>
