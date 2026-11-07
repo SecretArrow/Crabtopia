@@ -19,7 +19,36 @@ import {
   FormationPresetId,
 } from "../types";
 import { generateCrab } from "../engine/crabs";
-import { CONFIG, QUESTS, TEAM_SLOT_COSTS, TIDE_TAX_RATE } from "../engine/config";
+import {
+  CONFIG,
+  NPC_ITEM_STOCK,
+  QUESTS,
+  STAMINA_COSTS,
+  TEAM_SLOT_COSTS,
+  TIDE_TAX_RATE,
+} from "../engine/config";
+import {
+  RECOVERY_ITEMS,
+  applyRecoveryPurchase,
+  applyRecoveryUse,
+  applyStaminaRegen,
+  isWounded,
+  refillAllStamina,
+  spendStamina as spendStaminaPure,
+  windCrabs as windCrabsPure,
+  woundCrabs as woundCrabsPure,
+  type RecoveryItemId,
+} from "../engine/stamina";
+import {
+  generateNpcItemListings,
+  itemListingTotalPrice,
+  itemSaleProbability,
+  materialReferenceValue,
+  maxItemUnitPrice,
+  npcItemStockCount,
+  settleItemSale,
+} from "../engine/itemMarket";
+import { MATERIALS, type MaterialId } from "../data/materials";
 import {
   applyGoldCredit,
   applyMarketFeeSplit,
@@ -122,6 +151,41 @@ interface GameState {
   listEggInBazaar: (eggId: string, price: number) => void;
   buyBazaarListing: (listingId: string) => boolean;
   buyGenesisCrab: (genesisNumber: number) => boolean;
+
+  // stamina / wounds (engine/stamina.ts)
+  /**
+   * Atomically charge `cost` stamina to every listed crab (activity
+   * start). Returns false — charging NOBODY — when any crab cannot
+   * pay, and toasts the reason. Dive/raid/breed charge internally;
+   * render-layer activities (arena, mining, exploration, leviathan,
+   * tournament) charge through here.
+   */
+  chargeStamina: (crabIds: string[], cost: number) => boolean;
+  /** Arena aftermath: fallen crabs are Winded (−stamina, no wound). */
+  windCrabs: (crabIds: string[]) => void;
+  /** Raid/Leviathan aftermath: fallen crabs are Wounded for 45 min. */
+  woundCrabs: (crabIds: string[]) => void;
+
+  // inventory (player-held since the stamina round; migrated from the
+  // legacy crabtopia_inventory_v1 localStorage blob on rehydrate)
+  gainMaterials: (gains: Partial<Record<MaterialId, number>>) => void;
+  spendMaterials: (cost: Record<MaterialId, number>) => void;
+  gainItem: (itemId: string, count?: number) => void;
+  consumeItemCount: (itemId: string, count?: number) => void;
+
+  // recovery supplies (Bazaar Supplies shelf — 100% of the price
+  // flows into the Tide Treasury; see engine/stamina.ts)
+  buyRecoveryItem: (itemId: RecoveryItemId) => boolean;
+  useRecoveryItem: (itemId: RecoveryItemId, crabId?: string) => boolean;
+
+  // item market (engine/itemMarket.ts)
+  listItemForSale: (
+    materialId: MaterialId,
+    quantity: number,
+    unitPrice: number
+  ) => boolean;
+  cancelItemListing: (listingId: string) => boolean;
+  buyItemListing: (listingId: string) => boolean;
 
   // progression
   addGold: (amount: number) => void;
@@ -419,6 +483,8 @@ function createStarterPlayer(name: string): PlayerProfile {
     guardPostLevel: 0,
     ownedPlots: [],
     createdAt: Date.now(),
+    materials: {},
+    items: {},
   };
 }
 
@@ -456,7 +522,12 @@ export const useGame = create<GameState>()(
           crab.hireFee = l.hireFee;
           NPC_CRAB_CACHE[l.crabId] = crab;
         }
-        const bazaarListings = generateBazaarListings();
+        const bazaarListings = [
+          ...generateBazaarListings(),
+          // Item market shelf: NPC material listings (reference-priced;
+          // the charged price floats with the price index at purchase).
+          ...generateNpcItemListings(Date.now(), NPC_ITEM_STOCK, 11000),
+        ];
         for (const l of bazaarListings) {
           if (l.itemType === "crab") {
             const idx = parseInt(l.id.replace("baz_", ""), 10);
@@ -688,6 +759,33 @@ export const useGame = create<GameState>()(
             return false;
           }
         }
+        // Wounds + stamina (engine/stamina.ts): a wounded crab cannot
+        // deploy at all, and the dive charges STAMINA_COSTS.dive per
+        // crab AT START, atomically — if anyone cannot pay, nobody is
+        // charged and nobody deploys. (spendStamina is pure: the
+        // charged player is only committed by the set() below, after
+        // the site checks have also passed.)
+        const diveNow = Date.now();
+        for (const cid of team.crabIds) {
+          const c = player.crabs.find((x) => x.id === cid);
+          if (c && isWounded(c, diveNow)) {
+            get().pushToast({ title: `${c.name} is wounded — healing.`, variant: "error" });
+            return false;
+          }
+        }
+        const charged = spendStaminaPure(
+          player,
+          team.crabIds.filter(Boolean),
+          STAMINA_COSTS.dive,
+          diveNow
+        );
+        if (!charged.ok) {
+          get().pushToast({
+            title: `${charged.lacking[0]} is exhausted — needs rest or a tonic.`,
+            variant: "error",
+          });
+          return false;
+        }
         // The site must exist in worldSites and be unoccupied. Deploying
         // onto a taken site would overwrite its occupancy and strand the
         // first team's crabs in "diving" forever (claim/retreat only free
@@ -717,13 +815,13 @@ export const useGame = create<GameState>()(
             raidCount: 0,
           };
         });
-        // mark crabs as diving
-        const crabs = player.crabs.map((c) =>
+        // mark crabs as diving (on the stamina-charged roster)
+        const crabs = charged.player.crabs.map((c) =>
           team.crabIds.includes(c.id) ? { ...c, activity: "diving" as const } : c
         );
         set({
           worldSites: sites,
-          player: { ...player, crabs, dailyDiveCount: player.dailyDiveCount + 1 },
+          player: { ...charged.player, crabs, dailyDiveCount: player.dailyDiveCount + 1 },
         });
         get().pushToast({
           title: "Dive deployed!",
@@ -748,8 +846,12 @@ export const useGame = create<GameState>()(
         }
         const reward = Math.round(site.rewardRemaining);
         const team = player.teams.find((t) => t.id === site.teamId);
+        // Returning crabs re-anchor their stamina clock: dive time was
+        // work, not rest, so it must never accrue regen.
         const crabs = player.crabs.map((c) =>
-          team?.crabIds.includes(c.id) ? { ...c, activity: "idle" as const } : c
+          team?.crabIds.includes(c.id)
+            ? { ...c, activity: "idle" as const, staminaUpdatedAt: Date.now() }
+            : c
         );
         // mark site as claimed
         const newWorldSites = get().worldSites.map((s) =>
@@ -809,7 +911,9 @@ export const useGame = create<GameState>()(
         const partial = Math.round((elapsed / site.durationMs) * site.baseReward * 0.5);
         const team = player.teams.find((t) => t.id === site.teamId);
         const crabs = player.crabs.map((c) =>
-          team?.crabIds.includes(c.id) ? { ...c, activity: "idle" as const } : c
+          team?.crabIds.includes(c.id)
+            ? { ...c, activity: "idle" as const, staminaUpdatedAt: Date.now() }
+            : c
         );
         const newWorldSites = get().worldSites.map((s) =>
           s.id === siteId
@@ -922,6 +1026,28 @@ export const useGame = create<GameState>()(
           get().pushToast({ title: "Raiders must be idle — some are busy.", variant: "error" });
           return null;
         }
+        // Wounds + stamina (engine/stamina.ts): a wounded crab cannot
+        // raid, and the five raiders pay STAMINA_COSTS.raid at launch,
+        // atomically. Pure charge — committed by the set() below.
+        const raidNow = Date.now();
+        const woundedRaider = raiderCrabs.find((c) => isWounded(c, raidNow));
+        if (woundedRaider) {
+          get().pushToast({ title: `${woundedRaider.name} is wounded — healing.`, variant: "error" });
+          return null;
+        }
+        const chargedRaid = spendStaminaPure(
+          player,
+          raiderCrabs.map((c) => c.id),
+          STAMINA_COSTS.raid,
+          raidNow
+        );
+        if (!chargedRaid.ok) {
+          get().pushToast({
+            title: `${chargedRaid.lacking[0]} is exhausted — needs rest or a tonic.`,
+            variant: "error",
+          });
+          return null;
+        }
         // Reinforcements (player's own idle crabs or hired NPCs): capped at
         // CONFIG.maxReinforcements (the cap was declared but never enforced
         // here), de-duplicated, and never overlapping the raider five.
@@ -1025,13 +1151,26 @@ export const useGame = create<GameState>()(
         });
 
         // Raid winnings (steal + participation) are a faucet credit →
-        // tithed/ledgered via the tokenomics helper.
-        const credited = applyGoldCredit(player, totalRaiderReward);
+        // tithed/ledgered via the tokenomics helper. Credited on the
+        // stamina-charged player so the charge is not lost.
+        const credited = applyGoldCredit(chargedRaid.player, totalRaiderReward);
+        // WOUNDS — a result-layer hook (battle resolution untouched):
+        // every player crab whose HP hit 0 in the sim (finalHP aligned
+        // with the raider side: 5 raiders + reinforcements) is Wounded
+        // for 45 minutes. Hired NPCs are not in the roster — skipped.
+        const fallenIds = allRaider
+          .filter((_, i) => (result.finalHP.raider[i] ?? 1) <= 0)
+          .map((c) => c.id)
+          .filter((id) => credited.player.crabs.some((c) => c.id === id));
+        const aftermath =
+          fallenIds.length > 0
+            ? woundCrabsPure(credited.player, fallenIds, raidNow)
+            : credited.player;
         set({
           worldSites: newWorldSites,
           player: withXp(
             {
-              ...credited.player,
+              ...aftermath,
               raidEnergy: player.raidEnergy - 1,
               raids: [raid, ...player.raids].slice(0, 20),
               questProgress: qp,
@@ -1040,6 +1179,16 @@ export const useGame = create<GameState>()(
           ),
           battleReplay: raid,
         });
+        if (fallenIds.length > 0) {
+          const names = fallenIds
+            .map((id) => aftermath.crabs.find((c) => c.id === id)?.name ?? "A crab")
+            .join(", ");
+          get().pushToast({
+            title: `🩹 Wounded: ${names}`,
+            description: "45 minutes to heal — or use a Coral Salve from the Bazaar Supplies shelf.",
+            variant: "warning",
+          });
+        }
 
         get().pushToast({
           title: result.winner === "raider" ? `Raid won! +${credited.net} GOLD` : `Raid lost. +${credited.net} GOLD participation`,
@@ -1196,9 +1345,30 @@ export const useGame = create<GameState>()(
           get().pushToast({ title: `Need ${cost} GOLD to breed.`, variant: "error" });
           return null;
         }
+        // Wounds + stamina: each parent pays STAMINA_COSTS.breeding at
+        // the start of the breed, atomically (pure — committed below).
+        const breedNow = Date.now();
+        const woundedParent = [a, b].find((c) => isWounded(c, breedNow));
+        if (woundedParent) {
+          get().pushToast({ title: `${woundedParent.name} is wounded — healing.`, variant: "error" });
+          return null;
+        }
+        const chargedBreed = spendStaminaPure(
+          player,
+          [aId, bId],
+          STAMINA_COSTS.breeding,
+          breedNow
+        );
+        if (!chargedBreed.ok) {
+          get().pushToast({
+            title: `${chargedBreed.lacking[0]} is exhausted — needs rest or a tonic.`,
+            variant: "error",
+          });
+          return null;
+        }
         const egg = breedCrabs(a, b, player.id, undefined, legendaryChanceBonus);
-        // increment breed counts
-        const crabs = player.crabs.map((c) =>
+        // increment breed counts (on the stamina-charged roster)
+        const crabs = chargedBreed.player.crabs.map((c) =>
           c.id === aId || c.id === bId ? { ...c, breedCount: c.breedCount + 1, activity: "nursery" as const } : c
         );
         // schedule restore to idle after 1 min (nursery)
@@ -1475,6 +1645,263 @@ export const useGame = create<GameState>()(
         return true;
       },
 
+      chargeStamina: (crabIds, cost) => {
+        const player = get().player;
+        if (!player) return false;
+        const now = Date.now();
+        // Wounded crabs cannot be charged into an activity at all.
+        const wounded = crabIds
+          .map((id) => player.crabs.find((c) => c.id === id))
+          .find((c) => c && isWounded(c, now));
+        if (wounded) {
+          get().pushToast({ title: `${wounded.name} is wounded — healing.`, variant: "error" });
+          return false;
+        }
+        const r = spendStaminaPure(player, crabIds, cost, now);
+        if (!r.ok) {
+          get().pushToast({
+            title: `${r.lacking[0]} is exhausted — needs rest or a tonic.`,
+            description: "Stamina refills at the daily reset, regens while resting, or use a Tide Tonic.",
+            variant: "error",
+          });
+          return false;
+        }
+        set({ player: r.player });
+        return true;
+      },
+
+      windCrabs: (crabIds) => {
+        const player = get().player;
+        if (!player || crabIds.length === 0) return;
+        set({ player: windCrabsPure(player, crabIds, Date.now()) });
+      },
+
+      woundCrabs: (crabIds) => {
+        const player = get().player;
+        if (!player || crabIds.length === 0) return;
+        const next = woundCrabsPure(player, crabIds, Date.now());
+        set({ player: next });
+        const names = crabIds
+          .map((id) => next.crabs.find((c) => c.id === id)?.name ?? "A crab")
+          .join(", ");
+        get().pushToast({
+          title: `🩹 Wounded: ${names}`,
+          description: "45 minutes to heal — or use a Coral Salve from the Bazaar Supplies shelf.",
+          variant: "warning",
+        });
+      },
+
+      gainMaterials: (gains) => {
+        const player = get().player;
+        if (!player) return;
+        const materials: PlayerProfile["materials"] = { ...(player.materials ?? {}) };
+        for (const k of Object.keys(gains) as MaterialId[]) {
+          const n = gains[k] ?? 0;
+          if (n !== 0) materials[k] = Math.max(0, (materials[k] ?? 0) + n);
+        }
+        set({ player: { ...player, materials } });
+      },
+
+      spendMaterials: (cost) => {
+        const player = get().player;
+        if (!player) return;
+        const materials: PlayerProfile["materials"] = { ...(player.materials ?? {}) };
+        for (const k of Object.keys(cost) as MaterialId[]) {
+          const need = cost[k];
+          if (need > 0) materials[k] = Math.max(0, (materials[k] ?? 0) - need);
+        }
+        set({ player: { ...player, materials } });
+      },
+
+      gainItem: (itemId, count = 1) => {
+        const player = get().player;
+        if (!player || count <= 0) return;
+        set({
+          player: {
+            ...player,
+            items: {
+              ...(player.items ?? {}),
+              [itemId]: (player.items?.[itemId] ?? 0) + count,
+            },
+          },
+        });
+      },
+
+      consumeItemCount: (itemId, count = 1) => {
+        const player = get().player;
+        if (!player || count <= 0) return;
+        set({
+          player: {
+            ...player,
+            items: {
+              ...(player.items ?? {}),
+              [itemId]: Math.max(0, (player.items?.[itemId] ?? 0) - count),
+            },
+          },
+        });
+      },
+
+      buyRecoveryItem: (itemId) => {
+        const player = get().player;
+        if (!player) return false;
+        const r = applyRecoveryPurchase(player, itemId);
+        if (!r.ok) {
+          get().pushToast({ title: r.reason ?? "Purchase failed.", variant: "error" });
+          return false;
+        }
+        set({ player: r.player });
+        get().pushToast({
+          title: `Bought ${RECOVERY_ITEMS[itemId].name} for ${r.price} GOLD`,
+          description: "100% of the price funds the Tide Treasury.",
+          variant: "success",
+        });
+        return true;
+      },
+
+      useRecoveryItem: (itemId, crabId) => {
+        const player = get().player;
+        if (!player) return false;
+        const r = applyRecoveryUse(player, itemId, crabId, Date.now());
+        if (!r.ok) {
+          get().pushToast({ title: r.reason ?? "Can't use that now.", variant: "warning" });
+          return false;
+        }
+        set({ player: r.player });
+        get().pushToast({ title: r.message ?? "Item used.", variant: "success" });
+        return true;
+      },
+
+      listItemForSale: (materialId, quantity, unitPrice) => {
+        const player = get().player;
+        if (!player) return false;
+        if (!Number.isInteger(quantity) || quantity < 1) {
+          get().pushToast({ title: "Quantity must be a whole number of at least 1.", variant: "error" });
+          return false;
+        }
+        if (!Number.isFinite(unitPrice) || unitPrice < 1) {
+          get().pushToast({ title: "Unit price must be at least 1 GOLD.", variant: "error" });
+          return false;
+        }
+        unitPrice = Math.round(unitPrice);
+        // Hard cap: 300% of the reference value — the market never
+        // lets a dropped material be listed at a joke price.
+        const cap = maxItemUnitPrice(materialId);
+        if (unitPrice > cap) {
+          get().pushToast({
+            title: `Price capped at ${cap} GOLD (300% of the ${materialReferenceValue(materialId)} reference).`,
+            variant: "error",
+          });
+          return false;
+        }
+        const owned = player.materials?.[materialId] ?? 0;
+        if (owned < quantity) {
+          get().pushToast({ title: `You only have ${owned} to sell.`, variant: "error" });
+          return false;
+        }
+        // ESCROW: the stack leaves the inventory while listed.
+        const listing: BazaarListing = {
+          id: makeId("bazi"),
+          itemId: materialId,
+          itemType: "material",
+          sellerId: player.id,
+          sellerName: player.name,
+          price: unitPrice,
+          quantity,
+          listedAt: Date.now(),
+          type: "fixed",
+        };
+        set({
+          bazaarListings: [listing, ...get().bazaarListings],
+          player: {
+            ...player,
+            materials: {
+              ...(player.materials ?? {}),
+              [materialId]: owned - quantity,
+            },
+          },
+        });
+        get().pushToast({
+          title: `Listed ${quantity}× for ${unitPrice} GOLD each.`,
+          description: "NPC buyers browse the Bazaar over time — priced near the reference value sells fastest.",
+          variant: "success",
+        });
+        return true;
+      },
+
+      cancelItemListing: (listingId) => {
+        const player = get().player;
+        if (!player) return false;
+        const listing = get().bazaarListings.find((l) => l.id === listingId);
+        if (!listing || listing.itemType !== "material") return false;
+        if (listing.sellerId !== "player") return false;
+        // Delisting returns the escrowed stack in full.
+        const materialId = listing.itemId as MaterialId;
+        const qty = listing.quantity ?? 1;
+        set({
+          bazaarListings: get().bazaarListings.filter((l) => l.id !== listingId),
+          player: {
+            ...player,
+            materials: {
+              ...(player.materials ?? {}),
+              [materialId]: (player.materials?.[materialId] ?? 0) + qty,
+            },
+          },
+        });
+        get().pushToast({ title: `Listing cancelled — ${qty}× returned to your vault.`, variant: "default" });
+        return true;
+      },
+
+      buyItemListing: (listingId) => {
+        const player = get().player;
+        if (!player) return false;
+        const listing = get().bazaarListings.find((l) => l.id === listingId);
+        if (!listing || listing.itemType !== "material") return false;
+        // Mirror of the crab self-buy guard: your own listing would be
+        // a fee-only round trip that farms the trade quest.
+        if (listing.sellerId === "player") {
+          get().pushToast({ title: "You can't buy your own listing.", variant: "warning" });
+          return false;
+        }
+        const priceIndex = economyOf(player).priceIndex;
+        const total = itemListingTotalPrice(listing, priceIndex);
+        if (player.gold < total) {
+          get().pushToast({ title: "Not enough GOLD.", variant: "error" });
+          return false;
+        }
+        const materialId = listing.itemId as MaterialId;
+        const qty = listing.quantity ?? 1;
+        set({
+          player: {
+            ...player,
+            gold: player.gold - total,
+            materials: {
+              ...(player.materials ?? {}),
+              [materialId]: (player.materials?.[materialId] ?? 0) + qty,
+            },
+          },
+        });
+        // Same market-fee split as a crab sale (seller side is an NPC
+        // here; only the fee's destination is accounted).
+        {
+          const current = get().player!;
+          const fee = Math.round(total * CONFIG.bazaarFeePercent);
+          const split = applyMarketFeeSplit(current, total, fee);
+          if (split.treasuryShare > 0 || split.burned > 0) {
+            set({ player: split.player });
+          }
+        }
+        set({ bazaarListings: get().bazaarListings.filter((l) => l.id !== listingId) });
+        const qp = get().player!.questProgress.map((q) =>
+          q.questId === "bazaar_trade" ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
+        );
+        set({ player: { ...get().player!, questProgress: qp } });
+        get().pushToast({
+          title: `Bought ${qty}× for ${total} GOLD`,
+          variant: "success",
+        });
+        return true;
+      },
+
       addGold: (amount) => {
         // Admin/debug mint (Admin Console). Left functional and NEVER
         // tithed, but it is not invisible money: positive amounts are
@@ -1676,10 +2103,93 @@ export const useGame = create<GameState>()(
         // Health dashboard publishes the resulting numbers.
         const rolled = rollEmissionWindow(leviathanPlayer, now);
         const indexed = applyPriceIndex(rolled.player, now);
+
+        // STAMINA (engine/stamina.ts): the DAILY REFILL rides the
+        // same lazy anchor as the daily dive cap above — when
+        // `dailyDiveResetAt` rolls over, every crab's stamina refills
+        // to full (wounds are NOT cleared; only stamina refills).
+        // Passive regen is then settled lazily onto the roster.
+        let staminaPlayer = indexed.player;
+        if (now >= player.dailyDiveResetAt) {
+          staminaPlayer = refillAllStamina(staminaPlayer, now);
+        }
+        staminaPlayer = applyStaminaRegen(staminaPlayer, now);
+
+        // ITEM MARKET (engine/itemMarket.ts): NPC demand for the
+        // player's material listings, rolled from the time elapsed
+        // since the last market tick. A sold stack settles through
+        // the existing seller path (3.85% fee split, proceeds
+        // untithed) and progresses the Trader quest like any Bazaar
+        // trade. The NPC shelf restocks as a fresh rotation once it
+        // has fully sold out.
+        let marketPlayer = staminaPlayer;
+        let marketListings = get().bazaarListings;
+        let listingsChanged = false;
+        const saleNotices: { label: string; net: number }[] = [];
+        const lastMarketTick = marketPlayer.lastItemMarketTickAt;
+        if (typeof lastMarketTick !== "number") {
+          // Legacy save: materialize the anchor at first sight (the
+          // Tide Tax pattern) — no retroactive demand.
+          marketPlayer = { ...marketPlayer, lastItemMarketTickAt: now };
+        } else if (now > lastMarketTick) {
+          const elapsed = now - lastMarketTick;
+          const remaining: BazaarListing[] = [];
+          for (const l of marketListings) {
+            if (l.itemType === "material" && l.sellerId === "player") {
+              const p = itemSaleProbability(
+                l.price,
+                l.itemId as MaterialId,
+                elapsed
+              );
+              if (p > 0 && Math.random() < p) {
+                const s = settleItemSale(marketPlayer, l);
+                marketPlayer = s.player;
+                saleNotices.push({
+                  label: `${l.quantity ?? 1}× ${MATERIALS[l.itemId as MaterialId]?.name ?? l.itemId}`,
+                  net: s.net,
+                });
+                listingsChanged = true;
+                continue;
+              }
+            }
+            remaining.push(l);
+          }
+          if (saleNotices.length > 0) {
+            marketPlayer = {
+              ...marketPlayer,
+              questProgress: marketPlayer.questProgress.map((q) =>
+                q.questId === "bazaar_trade"
+                  ? {
+                      ...q,
+                      progress: Math.min(q.target, q.progress + saleNotices.length),
+                    }
+                  : q
+              ),
+            };
+            marketListings = remaining;
+          }
+          marketPlayer = { ...marketPlayer, lastItemMarketTickAt: now };
+        }
+        if (npcItemStockCount(marketListings) === 0) {
+          marketListings = [
+            ...marketListings,
+            ...generateNpcItemListings(now, NPC_ITEM_STOCK, now),
+          ];
+          listingsChanged = true;
+        }
+
         set({
           worldSites: newWorldSites,
-          player: indexed.player,
+          player: marketPlayer,
+          ...(listingsChanged ? { bazaarListings: marketListings } : {}),
         });
+        for (const s of saleNotices) {
+          get().pushToast({
+            title: `💰 Sold: ${s.label}`,
+            description: `+${s.net} GOLD after the Bazaar fee.`,
+            variant: "success",
+          });
+        }
         if (tide.tax > 0) {
           get().pushToast({
             title: `Tide Tax: −${tide.tax.toLocaleString()} GOLD to the Tide Treasury`,
@@ -1737,20 +2247,54 @@ export const useGame = create<GameState>()(
       onRehydrateStorage: () => {
         return (state) => {
           if (!state?.player) return;
-          const hasStuck = state.player.crabs.some(
-            (c) => c.activity === "nursery",
-          );
-          if (!hasStuck) return;
-          useGame.setState({
-            player: {
-              ...state.player,
-              crabs: state.player.crabs.map((c) =>
+          let player = state.player;
+          let changed = false;
+          if (player.crabs.some((c) => c.activity === "nursery")) {
+            player = {
+              ...player,
+              crabs: player.crabs.map((c) =>
                 c.activity === "nursery"
                   ? { ...c, activity: "idle" as const }
                   : c
               ),
-            },
-          });
+            };
+            changed = true;
+          }
+          // LEGACY INVENTORY MIGRATION: materials + item counts used
+          // to live in a separate localStorage blob
+          // (crabtopia_inventory_v1) owned by the activity screens.
+          // They are player state now (the item market escrows and
+          // settles against them), so fold the blob into the profile
+          // exactly once — only when the profile has none of its own —
+          // and consume the key so it can never resurrect stale counts.
+          try {
+            if (typeof window !== "undefined") {
+              const raw = window.localStorage.getItem("crabtopia_inventory_v1");
+              if (raw) {
+                const blob = JSON.parse(raw) as {
+                  materials?: Record<string, number>;
+                  items?: Record<string, number>;
+                };
+                window.localStorage.removeItem("crabtopia_inventory_v1");
+                if (
+                  player.materials === undefined &&
+                  player.items === undefined &&
+                  (blob.materials || blob.items)
+                ) {
+                  player = {
+                    ...player,
+                    materials: { ...(blob.materials ?? {}) } as PlayerProfile["materials"],
+                    items: { ...(blob.items ?? {}) },
+                  };
+                  changed = true;
+                }
+              }
+            }
+          } catch {
+            // storage unavailable / malformed blob — the profile's
+            // empty defaults apply; nothing is lost that was readable.
+          }
+          if (changed) useGame.setState({ player });
         };
       },
     }

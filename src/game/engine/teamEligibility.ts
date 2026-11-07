@@ -6,6 +6,7 @@
 // Tournaments and boss raids all show the same, explicit reasons.
 import type { Activity, Crab, Team } from "../types";
 import { TEAM_SIZE, validateTeam } from "./teams";
+import { isWounded, staminaOf, woundRemainingMs } from "./stamina";
 
 export interface TeamAvailability {
   available: boolean;
@@ -29,6 +30,17 @@ export interface TeamAvailabilityOptions {
    * raiding, hired out or resting cannot start another activity.
    */
   requireIdle?: boolean;
+  /**
+   * Per-crab stamina cost of the activity being gated (STAMINA_COSTS).
+   * When set, a member whose projected stamina is below the cost blocks
+   * the team with an "exhausted" reason. When omitted, stamina is not
+   * gated here (the store still charges it authoritatively at start).
+   */
+  staminaCost?: number;
+  /** Evaluation time for wound/stamina projection (defaults to now). */
+  now?: number;
+  /** Player's Second Wind expiry — stamina projection runs ×3 under it. */
+  recoveryBoostUntil?: number;
 }
 
 export function teamAvailability(
@@ -37,6 +49,8 @@ export function teamAvailability(
   opts: TeamAvailabilityOptions = {}
 ): TeamAvailability {
   const requireIdle = opts.requireIdle ?? true;
+  const now = opts.now ?? Date.now();
+  const boostUntil = opts.recoveryBoostUntil ?? 0;
   const reasons: string[] = [];
   const validation = validateTeam(team.crabIds);
 
@@ -65,6 +79,21 @@ export function teamAvailability(
     }
     if (requireIdle && crab.activity !== "idle") {
       reasons.push(`${crab.name} is ${ACTIVITY_LABEL[crab.activity]}`);
+    }
+    // Wounds block EVERY deployment (even non-idle-gated surfaces): a
+    // wounded crab is home healing, full stop.
+    if (isWounded(crab, now)) {
+      const mins = Math.ceil(woundRemainingMs(crab, now) / 60000);
+      reasons.push(
+        `${crab.name} is wounded — healing (${mins} min left)`
+      );
+    } else if (
+      opts.staminaCost !== undefined &&
+      staminaOf(crab, now, boostUntil) < opts.staminaCost
+    ) {
+      reasons.push(
+        `${crab.name} is exhausted — needs rest or a tonic`
+      );
     }
   }
 
