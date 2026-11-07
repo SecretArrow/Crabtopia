@@ -125,6 +125,86 @@ export const LEVIATHAN_WIN_GOLD = 5000;
 export const LEVIATHAN_CONSOLATION_GOLD = 100;
 export const LEVIATHAN_TAPER_RATES: readonly number[] = [1, 0.5, 0.25];
 
+// ---------------------------------------------------------------------------
+// STAMINA, WOUNDS & RECOVERY — the per-crab exertion layer.
+// Implemented by src/game/engine/stamina.ts; store wiring in gameStore.ts.
+// ---------------------------------------------------------------------------
+
+/** Every crab's stamina pool. Legacy crabs (no stored value) read as full. */
+export const MAX_STAMINA = 100;
+/** Passive rest regen: 20 stamina per hour (1 point per 3 minutes). */
+export const STAMINA_REGEN_PER_HOUR = 20;
+/**
+ * Stamina charged per crab when an activity STARTS. Existing per-day
+ * limits (dive cap, raid energy, exploration tickets, mining energy)
+ * stay as they are — stamina is the per-crab layer beneath them.
+ * Costs are deliberately low: a fresh crab can do ~7–10 activities.
+ */
+export const STAMINA_COSTS = {
+  dive: 15,
+  mining: 15,
+  arena: 10,
+  raid: 20,
+  exploration: 15,
+  leviathan: 20,
+  tournament: 15,
+  breeding: 10, // per parent
+} as const;
+export type StaminaActivity = keyof typeof STAMINA_COSTS;
+/**
+ * Arena defeats never wound (the arena is a sport) — a player crab
+ * whose HP hits 0 there is WINDED instead: this much extra stamina
+ * is drained, with no deployment lockout.
+ */
+export const ARENA_WINDED_STAMINA = 10;
+/**
+ * A crab whose HP hits 0 in a plunder raid or the Leviathan fight is
+ * WOUNDED for this long: it cannot deploy and its stamina does not
+ * regen until the wound heals (timer, Coral Salve, or a boosted
+ * countdown). The daily reset does NOT clear wounds.
+ */
+export const WOUND_DURATION_MS = 45 * 60 * 1000; // 45 minutes
+/** Second Wind Incense: every recovery process runs this fast. */
+export const RECOVERY_BOOST_MULTIPLIER = 3;
+/** …for this long (player-wide buff, `recoveryBoostUntil`). */
+export const RECOVERY_BOOST_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+/** Tide Tonic restores this much stamina; the Elixir restores to full
+ *  and refuses when it would restore LESS than a Tonic would. */
+export const TIDE_TONIC_RESTORE = 50;
+/**
+ * Recovery supply prices (GOLD) — SYSTEM prices: they pass through
+ * `indexedPrice`, so index 1 yields exactly these. 100% of every sale
+ * flows into the Tide Treasury (developer revenue, a pure transfer —
+ * circulating supply never changes).
+ */
+export const RECOVERY_ITEM_PRICES = {
+  tide_tonic: 300,
+  tide_elixir: 550,
+  coral_salve: 400,
+  second_wind_incense: 800,
+} as const;
+
+// ---------------------------------------------------------------------------
+// ITEM MARKET — dropped materials are tradable in the Bazaar.
+// Implemented by src/game/engine/itemMarket.ts.
+// ---------------------------------------------------------------------------
+
+/** A player may ask at most this multiple of a material's reference
+ *  value (data/materials.ts `baseValue`) per unit. */
+export const ITEM_PRICE_CAP_MULTIPLE = 3;
+/**
+ * NPC demand for player item listings, per elapsed hour, by the
+ * listing's price relative to the reference value: at or below
+ * reference buyers are eager; up to ITEM_SALE_MAX_RATIO × reference
+ * they are rare; above that there is no demand at all.
+ */
+export const ITEM_SALE_CHANCE_PER_HOUR_AT_REFERENCE = 0.5;
+export const ITEM_SALE_CHANCE_PER_HOUR_ABOVE_REFERENCE = 0.1;
+export const ITEM_SALE_MAX_RATIO = 2;
+/** NPC material stock the Bazaar keeps on the shelf (restocked as a
+ *  fresh rotation once it sells out). */
+export const NPC_ITEM_STOCK = 8;
+
 // Paid team slots: the first 5 team slots are free; slot 6 costs
 // 50,000 and slot 7 costs 120,000 (team cap = 5 + this list's length).
 // This is the single source — the store and TeamsScreen both import it.

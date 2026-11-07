@@ -1,6 +1,8 @@
 // Crabtopia - Core Type Definitions
 // All types shared across the game engine and UI
 
+import type { MaterialId } from "./data/materials";
+
 export type FactionId =
   | "coral_court"
   | "cinderreef"
@@ -87,6 +89,21 @@ export interface Crab {
   hiredUntil?: number;
   masteryBadges: string[];
   moltTier: number;
+  /**
+   * Stamina, 0..MAX_STAMINA (engine/stamina.ts). OPTIONAL + additive:
+   * legacy crabs without it read as fully rested (100). Charged when
+   * an activity starts; regens passively while resting; refilled to
+   * full at the daily reset.
+   */
+  stamina?: number;
+  /** ms epoch anchor from which passive stamina regen accrues lazily. */
+  staminaUpdatedAt?: number;
+  /**
+   * ms epoch until which the crab is WOUNDED (HP hit 0 in a raid or
+   * the Leviathan fight): cannot deploy, stamina does not regen.
+   * Undefined / in the past = healthy. Arena defeats never wound.
+   */
+  woundedUntil?: number;
 }
 
 export type FormationPresetId =
@@ -234,13 +251,20 @@ export interface HallListing {
 export interface BazaarListing {
   id: string;
   itemId: string;
-  itemType: "crab" | "egg";
+  /**
+   * "material" (item market): itemId is a MaterialId, `price` is the
+   * PER-UNIT price and `quantity` the stack size held in escrow.
+   */
+  itemType: "crab" | "egg" | "material";
   sellerId: string;
   sellerName: string;
   price: number;
   listedAt: number;
   type: "fixed" | "auction";
   settlingUntil?: number;
+  /** Stack size for material listings (escrowed out of the seller's
+   *  inventory while listed). Undefined for crab/egg listings. */
+  quantity?: number;
 }
 
 export interface QuestProgress {
@@ -338,6 +362,32 @@ export interface PlayerProfile {
   guardPostLevel: number;
   ownedPlots: string[];
   createdAt: number;
+  /**
+   * Dropped/crafted material counts (additive; undefined = empty).
+   * This is the player's sellable stock for the Bazaar item market.
+   * Migrated from the legacy `crabtopia_inventory_v1` localStorage
+   * blob on first rehydrate — see gameStore's onRehydrateStorage.
+   */
+  materials?: Partial<Record<MaterialId, number>>;
+  /**
+   * Consumable item counts, keyed by item id (additive; undefined =
+   * empty): crafted items (data/materials ItemId) and recovery
+   * supplies (engine/stamina RecoveryItemId) share this one record —
+   * their id namespaces never collide.
+   */
+  items?: Partial<Record<string, number>>;
+  /**
+   * Second Wind Incense: while `now < recoveryBoostUntil`, ALL
+   * recovery runs ×RECOVERY_BOOST_MULTIPLIER (stamina regen and wound
+   * countdowns). Undefined / past = no boost.
+   */
+  recoveryBoostUntil?: number;
+  /**
+   * Anchor of the last item-market demand tick (ms epoch). NPC demand
+   * for the player's material listings is rolled lazily from the
+   * elapsed time since this anchor — see gameStore tickTimers.
+   */
+  lastItemMarketTickAt?: number;
 }
 
 export interface BattleConfig {

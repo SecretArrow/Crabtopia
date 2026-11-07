@@ -29,6 +29,12 @@ export interface MaterialDef {
   rarity: Rarity;
   description: string;
   source: "mining" | "exploration" | "both";
+  /**
+   * Reference market value in GOLD per unit (engine/itemMarket.ts):
+   * the price NPC Bazaar listings are based on, the anchor of the NPC
+   * demand model, and the base of the 300% player price cap.
+   */
+  baseValue: number;
 }
 
 export type RecipeEffect =
@@ -90,6 +96,7 @@ export const MATERIALS: Record<MaterialId, MaterialDef> = {
     description:
       "Tough thread-like strands harvested from the kelp forests. The backbone of crude crafting.",
     source: "mining",
+    baseValue: 40,
   },
   pearl_shard: {
     id: "pearl_shard",
@@ -99,6 +106,7 @@ export const MATERIALS: Record<MaterialId, MaterialDef> = {
     description:
       "Lustrous fragments of deep-sea pearls. Polishes shells to a mirror sheen.",
     source: "mining",
+    baseValue: 120,
   },
   crystal_dust: {
     id: "crystal_dust",
@@ -108,6 +116,7 @@ export const MATERIALS: Record<MaterialId, MaterialDef> = {
     description:
       "Ground tide-crystals that hold a faint glow. A catalyst for enchanted crafts.",
     source: "mining",
+    baseValue: 300,
   },
   iron_ore: {
     id: "iron_ore",
@@ -117,6 +126,7 @@ export const MATERIALS: Record<MaterialId, MaterialDef> = {
     description:
       "Rust-flecked nodules mined from the ridge. Used to weight and sharpen claws.",
     source: "mining",
+    baseValue: 90,
   },
   gold_nugget: {
     id: "gold_nugget",
@@ -126,6 +136,7 @@ export const MATERIALS: Record<MaterialId, MaterialDef> = {
     description:
       "A weighty chip of pure tide-gold. Plundered from chests or sifted from rich veins.",
     source: "both",
+    baseValue: 500,
   },
   abyssal_gem: {
     id: "abyssal_gem",
@@ -135,6 +146,7 @@ export const MATERIALS: Record<MaterialId, MaterialDef> = {
     description:
       "A gem cut from the lightless deep. Pulsing with raw tide-magic — rare and powerful.",
     source: "both",
+    baseValue: 1200,
   },
 };
 
