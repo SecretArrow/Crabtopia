@@ -171,23 +171,30 @@ export type GenesisPurchaseResult =
  * Pure purchase logic shared by the store action and the unit tests.
  * Buyer pays the listed price; the bazaar fee (CONFIG.bazaarFeePercent) is
  * taken out of the sale proceeds as a sink, matching buyBazaarListing.
+ *
+ * Genesis crabs are SYSTEM goods: their price floats with the tokenomics
+ * price index (economy.ts indexedPrice). `crab.price` stays the BASE
+ * price; the effective price is round(base × priceIndex). The default
+ * index of 1 reproduces the exact pre-v2 prices.
  */
 export function attemptGenesisPurchase(
   gold: number,
   soldIds: readonly string[],
-  genesisNumber: number
+  genesisNumber: number,
+  priceIndex: number = 1
 ): GenesisPurchaseResult {
   const crab = getGenesisCrab(genesisNumber);
   if (!crab) return { ok: false, reason: "not_found" };
   if (!crab.listed) return { ok: false, reason: "not_listed" };
   if (soldIds.includes(crab.id)) return { ok: false, reason: "already_sold" };
-  if (gold < crab.price) return { ok: false, reason: "insufficient_gold" };
-  const fee = Math.round(crab.price * CONFIG.bazaarFeePercent);
+  const price = Math.max(0, Math.round(crab.price * priceIndex));
+  if (gold < price) return { ok: false, reason: "insufficient_gold" };
+  const fee = Math.round(price * CONFIG.bazaarFeePercent);
   return {
     ok: true,
-    price: crab.price,
+    price,
     fee,
-    newGold: gold - crab.price,
+    newGold: gold - price,
     newSoldIds: [...soldIds, crab.id],
     crab,
   };

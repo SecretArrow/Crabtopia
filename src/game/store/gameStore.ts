@@ -23,10 +23,16 @@ import { CONFIG, QUESTS, TEAM_SLOT_COSTS, TIDE_TAX_RATE } from "../engine/config
 import {
   applyGoldCredit,
   applyMarketFeeSplit,
+  applyPriceIndex,
   applySinkSplit,
   applyTideTax,
+  clampSupply,
   defaultEconomy,
   economyOf,
+  effectiveListingPrice,
+  leviathanWinAmount,
+  leviathanWinsTodayOf,
+  rollEmissionWindow,
 } from "../engine/economy";
 import { simulateBattle, BattleSide, TACTIC_CARDS } from "../engine/battle";
 import { crabBaseBP, teamBP } from "../engine/bp";
@@ -135,6 +141,15 @@ interface GameState {
    * never counted as minted — the gold was the player's all along.
    */
   refundGold: (amount: number) => void;
+  /**
+   * Claim a Leviathan raid WIN: pays the daily-tapered faucet amount
+   * (win #1 today 100%, #2 50%, #3+ 25% of 5,000) through creditGold —
+   * so the Tide Tithe applies AFTER the taper — and records the win in
+   * the rolling 24h taper window. Returns { amount, net, tax } where
+   * amount is the tapered gross. The 100g consolation is NOT tapered
+   * and keeps using creditGold directly.
+   */
+  claimLeviathanWin: () => { amount: number; net: number; tax: number };
   spendGold: (amount: number) => boolean;
   setGuardPostLevel: (level: number) => void;
   addXp: (amount: number) => void;
@@ -389,6 +404,8 @@ function createStarterPlayer(name: string): PlayerProfile {
     dailyDiveResetAt: Date.now() + 24 * 60 * 60 * 1000,
     raidEnergy: CONFIG.dailyRaidEnergy,
     raidEnergyResetAt: Date.now() + 24 * 60 * 60 * 1000,
+    leviathanWinsToday: 0,
+    leviathanWinsResetAt: Date.now() + 24 * 60 * 60 * 1000,
     tutorialComplete: false,
     questProgress: QUESTS.map((q) => ({
       questId: q.id,
@@ -1331,12 +1348,18 @@ export const useGame = create<GameState>()(
           get().pushToast({ title: "You can't buy your own listing.", variant: "warning" });
           return false;
         }
-        if (player.gold < listing.price) {
+        // SYSTEM (NPC) listings float with the price index; player-set
+        // prices never do. At index 1 the price is exactly as listed.
+        const price = effectiveListingPrice(
+          listing,
+          economyOf(player).priceIndex
+        );
+        if (player.gold < price) {
           get().pushToast({ title: "Not enough GOLD.", variant: "error" });
           return false;
         }
-        const fee = Math.round(listing.price * CONFIG.bazaarFeePercent);
-        const sellerShare = listing.price - fee;
+        const fee = Math.round(price * CONFIG.bazaarFeePercent);
+        const sellerShare = price - fee;
         // transfer item
         if (listing.itemType === "crab") {
           let crab = NPC_CRAB_CACHE[listing.itemId];
@@ -1347,7 +1370,7 @@ export const useGame = create<GameState>()(
           set({
             player: {
               ...player,
-              gold: player.gold - listing.price,
+              gold: player.gold - price,
               crabs: [...player.crabs, newCrab],
             },
           });
@@ -1363,7 +1386,7 @@ export const useGame = create<GameState>()(
           set({
             player: {
               ...player,
-              gold: player.gold - listing.price,
+              gold: player.gold - price,
               eggs: [...player.eggs, newEgg],
             },
           });
@@ -1373,7 +1396,7 @@ export const useGame = create<GameState>()(
         // to the Tide Treasury and the remainder of the fee is burned.
         {
           const current = get().player!;
-          const split = applyMarketFeeSplit(current, listing.price, fee);
+          const split = applyMarketFeeSplit(current, price, fee);
           if (split.treasuryShare > 0 || split.burned > 0) {
             set({ player: split.player });
           }
@@ -1394,7 +1417,7 @@ export const useGame = create<GameState>()(
         );
         set({ player: { ...get().player!, questProgress: qp } });
         get().pushToast({
-          title: `Purchase complete! -${listing.price} GOLD`,
+          title: `Purchase complete! -${price} GOLD`,
           description: `Fee: ${fee}`,
           variant: "success",
         });
@@ -1404,7 +1427,10 @@ export const useGame = create<GameState>()(
       buyGenesisCrab: (genesisNumber) => {
         const player = get().player;
         if (!player) return false;
-        const result = attemptGenesisPurchase(player.gold, get().genesisSoldIds, genesisNumber);
+        // Genesis prices are system prices: they float with the
+        // tokenomics price index (base price × index, index 1 = base).
+        const priceIndex = economyOf(player).priceIndex;
+        const result = attemptGenesisPurchase(player.gold, get().genesisSoldIds, genesisNumber, priceIndex);
         if (!result.ok) {
           const messages: Record<string, string> = {
             not_found: "Genesis Crab not found.",
@@ -1412,7 +1438,7 @@ export const useGame = create<GameState>()(
             already_sold: "This Genesis Crab has already been sold.",
           };
           if (result.reason === "insufficient_gold") {
-            const g = attemptGenesisPurchase(Number.MAX_SAFE_INTEGER, [], genesisNumber);
+            const g = attemptGenesisPurchase(Number.MAX_SAFE_INTEGER, [], genesisNumber, priceIndex);
             get().pushToast({
               title: "Not enough GOLD.",
               description: g.ok ? `This Genesis Crab costs ${g.price} GOLD — you have ${player.gold}.` : undefined,
@@ -1454,19 +1480,25 @@ export const useGame = create<GameState>()(
         // tithed, but it is not invisible money: positive amounts are
         // counted in the ledger as minted, negative as burned, so the
         // Economy Health numbers stay honest even for cheat gold.
-        // Gameplay rewards must use creditGold instead.
+        // Gameplay rewards must use creditGold instead. The supply
+        // counters follow the CLAMPED supply delta, so even cheat gold
+        // cannot push the ledger's circulating past the 21B cap (the
+        // player's own balance is the admin's business; the world's
+        // books stay constitutional).
         const player = get().player;
         if (!player) return;
         if (!Number.isFinite(amount) || amount === 0) return;
         const eco = economyOf(player);
+        const appliedDelta = clampSupply(eco.circulating + amount) - eco.circulating;
         set({
           player: {
             ...player,
             gold: player.gold + amount,
             economy: {
               ...eco,
-              totalMinted: eco.totalMinted + Math.max(0, amount),
-              totalBurned: eco.totalBurned + Math.max(0, -amount),
+              totalMinted: eco.totalMinted + Math.max(0, appliedDelta),
+              totalBurned: eco.totalBurned + Math.max(0, -appliedDelta),
+              circulating: eco.circulating + appliedDelta,
             },
           },
         });
@@ -1478,6 +1510,30 @@ export const useGame = create<GameState>()(
         const r = applyGoldCredit(player, amount, opts);
         if (r.player !== player) set({ player: r.player });
         return { net: r.net, tax: r.tax };
+      },
+
+      claimLeviathanWin: () => {
+        const player = get().player;
+        if (!player) return { amount: 0, net: 0, tax: 0 };
+        const now = Date.now();
+        // Rolling 24h taper window — same lazy-reset pattern as the
+        // daily dive cap. The tapered gross is credited through
+        // applyGoldCredit, so the Tide Tithe applies AFTER the taper.
+        const wins = leviathanWinsTodayOf(player, now);
+        const resetAt =
+          player.leviathanWinsResetAt && player.leviathanWinsResetAt > now
+            ? player.leviathanWinsResetAt
+            : now + 24 * 60 * 60 * 1000;
+        const amount = leviathanWinAmount(wins);
+        const r = applyGoldCredit(player, amount);
+        set({
+          player: {
+            ...r.player,
+            leviathanWinsToday: wins + 1,
+            leviathanWinsResetAt: resetAt,
+          },
+        });
+        return { amount, net: r.net, tax: r.tax };
       },
 
       refundGold: (amount) => {
@@ -1596,9 +1652,33 @@ export const useGame = create<GameState>()(
           },
           now
         );
+        // LEVIATHAN TAPER window: rolling 24h, same lazy-reset pattern
+        // as the daily dive cap. Expired window → wins back to 0 and
+        // the first win of the new window pays in full again.
+        let leviathanPlayer = tide.player;
+        if (
+          !leviathanPlayer.leviathanWinsResetAt ||
+          now >= leviathanPlayer.leviathanWinsResetAt
+        ) {
+          leviathanPlayer = {
+            ...leviathanPlayer,
+            leviathanWinsToday: 0,
+            leviathanWinsResetAt: now + 24 * 60 * 60 * 1000,
+          };
+        }
+        // SUPPLY CONSTITUTION (tokenomics v2): NOTHING is minted by
+        // the passage of time — GOLD is created only as gameplay
+        // rewards. This tick merely (a) rolls the 365-day minting
+        // window when it has elapsed (re-basing the 3% speed limit on
+        // current supply; the roll itself creates nothing) and
+        // (b) lets the price index re-read realized, purely
+        // gameplay-driven growth on its 30-day window. The Economy
+        // Health dashboard publishes the resulting numbers.
+        const rolled = rollEmissionWindow(leviathanPlayer, now);
+        const indexed = applyPriceIndex(rolled.player, now);
         set({
           worldSites: newWorldSites,
-          player: tide.player,
+          player: indexed.player,
         });
         if (tide.tax > 0) {
           get().pushToast({
