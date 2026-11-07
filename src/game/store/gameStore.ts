@@ -505,6 +505,16 @@ export const useGame = create<GameState>()(
       deleteTeam: (id) => {
         const player = get().player;
         if (!player) return;
+        // A team with a deployed (unclaimed) dive must survive until the
+        // dive resolves: claim/retreat locate the team through the site,
+        // and deleting it here would strand its crabs in "diving" forever.
+        const deployed = get().worldSites.some(
+          (s) => s.teamId === id && s.state === "deployed"
+        );
+        if (deployed) {
+          get().pushToast({ title: "That team is out on a dive — claim or retreat it first.", variant: "warning" });
+          return;
+        }
         set({ player: { ...player, teams: player.teams.filter((t) => t.id !== id) } });
       },
 
@@ -576,6 +586,16 @@ export const useGame = create<GameState>()(
         const player = get().player;
         if (!player) return;
         if (!Number.isInteger(slot) || slot < 0 || slot > 4) return;
+        // A diving crab is resolved through this team's slots when its
+        // dive is claimed; pulling it out mid-dive would strand it.
+        const teamNow = player.teams.find((t) => t.id === teamId);
+        const outgoing = teamNow
+          ? player.crabs.find((c) => c.id === toTeamSlots(teamNow.crabIds)[slot])
+          : undefined;
+        if (outgoing && outgoing.activity === "diving") {
+          get().pushToast({ title: "That crab is out on a dive — claim or retreat it first.", variant: "warning" });
+          return;
+        }
         const teams = player.teams.map((t) => {
           if (t.id !== teamId) return t;
           const newIds = toTeamSlots(t.crabIds);
@@ -609,6 +629,20 @@ export const useGame = create<GameState>()(
             get().pushToast({ title: `${c?.name} is busy.`, variant: "error" });
             return false;
           }
+        }
+        // The site must exist in worldSites and be unoccupied. Deploying
+        // onto a taken site would overwrite its occupancy and strand the
+        // first team's crabs in "diving" forever (claim/retreat only free
+        // the site's current team); a site unknown to worldSites would
+        // strand this team the same way.
+        const targetSite = get().worldSites.find((s) => s.id === siteId);
+        if (!targetSite) {
+          get().pushToast({ title: "That dive site no longer exists.", variant: "error" });
+          return false;
+        }
+        if (targetSite.occupiedBy) {
+          get().pushToast({ title: "That dive site is already occupied.", variant: "warning" });
+          return false;
         }
         // occupy site
         const sites = get().worldSites.map((s) => {
