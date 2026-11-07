@@ -1,7 +1,7 @@
 // Crabtopia — Unit tests: Atlas v2 rich sheets + idle variation.
 //
-// The v2 pipeline (scripts/build_sprite_atlas_v2.py) replaced six
-// classes' 4×4 sheets with rich named-clip atlases. These tests lock
+// The v2 pipeline (scripts/build_sprite_atlas_v2.py) replaced all
+// eight classes' 4×4 sheets with rich named-clip atlases. These tests lock
 // the v2 contract: every state-machine state resolves to a clip, the
 // rich clip set exists, frame geometry is sane, attack-type clips
 // carry hitMoment events (support casts do not), and the seeded
@@ -43,8 +43,9 @@ const RICH_CLASSES = [
   "skitter",
   "tidecaller",
   "shellmender",
+  "warden",
+  "gildclaw",
 ];
-const V1_CLASSES = ["warden", "gildclaw"];
 const STATE_CLIPS = [
   "idle",
   "walk",
@@ -74,12 +75,12 @@ const RICH_CLIPS = [
 ];
 
 describe("atlas v2 — rich class sheets", () => {
-  it("bumps the atlas version to 2 and keeps v1 classes intact", () => {
+  it("bumps the atlas version to 2 — every class sheet is rich, none legacy", () => {
     expect(atlas.version).toBe(2);
-    for (const cls of V1_CLASSES) {
-      expect(atlas.sheets[cls], cls).toBeDefined();
-      expect(atlas.sheets[cls].rich).toBeUndefined();
-      expect(atlas.sheets[cls].src).toBe(`/art/sprites/${cls}.png`);
+    expect(Object.keys(atlas.sheets).sort()).toEqual([...RICH_CLASSES].sort());
+    for (const cls of RICH_CLASSES) {
+      expect(atlas.sheets[cls].rich, cls).toBe(true);
+      expect(atlas.sheets[cls].src, cls).toBe(`/art/sprites/${cls}-v2.png`);
     }
   });
 
@@ -136,9 +137,13 @@ describe("atlas v2 — rich class sheets", () => {
     const sm = atlas.sheets.shellmender.animations;
     expect(Object.values(sm.skill.events ?? {})).not.toContain("hitMoment");
     expect(Object.values(sm.cast.events ?? {})).not.toContain("hitMoment");
-    // …while a damage caster's skill does fire its moment.
-    const tc = atlas.sheets.tidecaller.animations;
-    expect(Object.values(tc.skill.events ?? {})).toContain("hitMoment");
+    // …while the damage casters' skills do fire their moment.
+    for (const cls of ["tidecaller", "warden", "gildclaw"]) {
+      const a = atlas.sheets[cls].animations;
+      expect(Object.values(a.skill.events ?? {}), `${cls} skill`).toContain(
+        "hitMoment",
+      );
+    }
   });
 
   it("the pipeline manifest covers exactly the rich classes", () => {
