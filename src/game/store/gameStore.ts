@@ -844,23 +844,45 @@ export const useGame = create<GameState>()(
           get().pushToast({ title: "Site not raidable.", variant: "error" });
           return null;
         }
+        // You cannot raid your own deployed site: the participation reward
+        // (and a possible "steal" from your own reward pool) would be gold
+        // created from nothing, repeatable per raid energy.
+        if (site.ownerIsPlayer) {
+          get().pushToast({ title: "You can't raid your own dive site.", variant: "warning" });
+          return null;
+        }
         // get defender crabs - they're NPC crabs
         const defenderSeed = parseInt(site.id.replace("site_", ""), 10) + 2000;
         const defenderTeam = generateNpcTeam(defenderSeed, site.bpBracket);
-        // for player raids, get player crabs
-        const raiderCrabs = raiderCrabIds
+        // Raiders: exactly 5 DISTINCT crabs, and each must be idle — a
+        // duplicated id used to be counted twice toward the 5, and busy
+        // (e.g. diving) crabs could fight while deployed elsewhere.
+        const uniqueRaiderIds = [...new Set(raiderCrabIds)];
+        const raiderCrabs = uniqueRaiderIds
           .map((id) => player.crabs.find((c) => c.id === id))
           .filter(Boolean) as Crab[];
         if (raiderCrabs.length !== 5) {
-          get().pushToast({ title: "Need 5 raider crabs.", variant: "error" });
+          get().pushToast({ title: "Need 5 distinct raider crabs.", variant: "error" });
           return null;
         }
-        // add reinforcements (player's own or hired NPC)
+        if (raiderCrabs.some((c) => c.activity !== "idle")) {
+          get().pushToast({ title: "Raiders must be idle — some are busy.", variant: "error" });
+          return null;
+        }
+        // Reinforcements (player's own idle crabs or hired NPCs): capped at
+        // CONFIG.maxReinforcements (the cap was declared but never enforced
+        // here), de-duplicated, and never overlapping the raider five.
         const reinforcementCrabs: Crab[] = [];
         for (const rid of reinforcements) {
+          if (reinforcementCrabs.length >= CONFIG.maxReinforcements) break;
+          if (uniqueRaiderIds.includes(rid)) continue;
+          if (reinforcementCrabs.some((c) => c.id === rid)) continue;
           const own = player.crabs.find((c) => c.id === rid);
-          if (own) reinforcementCrabs.push(own);
-          else if (NPC_CRAB_CACHE[rid]) reinforcementCrabs.push(NPC_CRAB_CACHE[rid]);
+          if (own) {
+            if (own.activity === "idle") reinforcementCrabs.push(own);
+          } else if (NPC_CRAB_CACHE[rid]) {
+            reinforcementCrabs.push(NPC_CRAB_CACHE[rid]);
+          }
         }
         const allRaider = [...raiderCrabs, ...reinforcementCrabs];
 
@@ -879,9 +901,12 @@ export const useGame = create<GameState>()(
         };
         const result = simulateBattle(raiderSide, defenderSide, seed);
 
-        // Determine rewards
+        // Determine rewards. The steal rate is CONFIG.raidStealPercent,
+        // full stop: the 50% insurance cap belongs to the DEFENDER's
+        // policy (see DefenseHubModal), and keying it off the ATTACKER's
+        // insuranceActive flag punished the buyer for insuring.
         const stolenAmount = result.winner === "raider"
-          ? Math.round(site.rewardRemaining * (player.insuranceActive ? 0.5 : CONFIG.raidStealPercent))
+          ? Math.round(site.rewardRemaining * CONFIG.raidStealPercent)
           : 0;
         const participationReward = Math.round(site.baseReward * CONFIG.raidParticipationPercent);
         const totalRaiderReward = stolenAmount + participationReward;
@@ -894,7 +919,7 @@ export const useGame = create<GameState>()(
           raiderName: player.name,
           raiderCrabIds: raiderCrabIds,
           defenderCrabIds: defenderTeam.crabs.map((c) => c.id),
-          raiderReinforcementIds: reinforcements,
+          raiderReinforcementIds: reinforcementCrabs.map((c) => c.id),
           defenderReinforcementIds: [],
           startTime: Date.now(),
           durationMs: CONFIG.raidDurationMs,
