@@ -430,7 +430,11 @@ export default function BazaarScreen() {
               </div>
               <div className="space-y-2">
                 {recentFeed.length === 0 ? (
-                  <div className="text-xs opacity-60 py-2">No activity yet.</div>
+                  <EmptyState
+                    compact
+                    message="No activity yet"
+                    hint="Bids, sales and hatches will appear here."
+                  />
                 ) : (
                   recentFeed.map((it) => (
                     <div
@@ -511,7 +515,7 @@ export default function BazaarScreen() {
                               : "bg-white/5 border-white/10"
                           }`}
                         >
-                          <CrabRenderer crab={c} size={56} animate={false} />
+                          <CrabRenderer crab={c} size={56} />
                           <div className="text-[9px] truncate">{c.name}</div>
                           <div className="text-[9px] opacity-60">BP {formatBP(bp)}</div>
                         </button>
@@ -1053,7 +1057,7 @@ function CrabListingCard({
           className="absolute inset-0 w-full h-full object-cover opacity-15"
           draggable={false}
         />
-        <CrabRenderer crab={crab} size={96} animate={false} />
+        <CrabRenderer crab={crab} size={96} />
         {/* faction emblem top-left */}
         <div className="absolute top-1 left-1">
           <FactionBadge faction={crab.faction} size={16} glow />

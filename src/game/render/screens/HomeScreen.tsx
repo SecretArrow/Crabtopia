@@ -18,6 +18,7 @@ import {
 } from "../ui";
 import { FACTIONS } from "../../content/factions";
 import CrabRenderer from "../CrabRenderer";
+import { hashSeed } from "../../animation/idleVariation";
 import QuestsModal from "../QuestsModal";
 import ClansModal from "../ClansModal";
 import LeviathanRaidModal from "../LeviathanRaidModal";
@@ -152,7 +153,7 @@ export default function HomeScreen() {
                   filter: `drop-shadow(0 8px 24px ${FACTIONS[heroCrab.faction].colors.primary}66)`,
                 }}
               >
-                <CrabRenderer crab={heroCrab} size={150} animate pose="walk" />
+                <CrabRenderer crab={heroCrab} size={150} pose="walk" />
               </div>
             </div>
           )}
@@ -401,6 +402,7 @@ export default function HomeScreen() {
                         ? "drop-shadow(0 0 10px rgba(255,209,102,0.9))"
                         : "saturate(0.6) brightness(0.85)",
                       animation: isReady ? "glowPulse 1.8s ease-in-out infinite" : undefined,
+                      animationDelay: `${-(hashSeed(egg.id) % 2600) / 1000}s`,
                     }}
                   />
                   <div className="font-bold text-[11px] truncate font-display">{egg.name}</div>

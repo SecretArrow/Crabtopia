@@ -23,6 +23,7 @@ import {
   classIcon,
   ClassIcon,
 } from "./ui";
+import CrabSheetSprite from "../animation/CrabSheetSprite";
 
 // ---------- LOCAL TYPES ----------
 
@@ -545,7 +546,7 @@ function ReplayListRow({
   );
 }
 
-// A crab on the arena seabed: CSS silhouette + faction tint + class icon + HP bar.
+// A crab on the arena seabed: its own living sheet sprite + HP bar.
 function CrabCell({
   crab,
   hp,
@@ -568,8 +569,6 @@ function CrabCell({
   const defeated = hp <= 0;
   const big = crab.hp >= 1500; // leviathan world-boss scale
   const W = big ? 76 : 54;
-  const H = big ? 60 : 46;
-  const claw = big ? 22 : 16;
 
   return (
     <div
@@ -596,77 +595,19 @@ function CrabCell({
         className={`relative transition-transform duration-300 ${isActor ? "scale-110" : "scale-100"} ${
           defeated ? "" : "crab-bob"
         }`}
-        style={{ width: W, height: H, animationDelay: `${bobDelay}s` }}
+        style={{ width: W, animationDelay: `${bobDelay}s` }}
       >
-        {/* claws */}
-        <span
-          className="absolute rounded-full"
-          style={{
-            width: claw,
-            height: claw,
-            left: -4,
-            top: big ? 12 : 9,
-            background: `linear-gradient(135deg, ${fac.colors.primary}, ${fac.colors.dark})`,
-            boxShadow: "inset 0 -2px 4px rgba(0,0,0,0.35)",
-          }}
-        />
-        <span
-          className="absolute rounded-full"
-          style={{
-            width: claw,
-            height: claw,
-            right: -4,
-            top: big ? 12 : 9,
-            background: `linear-gradient(225deg, ${fac.colors.primary}, ${fac.colors.dark})`,
-            boxShadow: "inset 0 -2px 4px rgba(0,0,0,0.35)",
-          }}
-        />
-        {/* body */}
-        <span
-          className="absolute"
-          style={{
-            left: "12%",
-            right: "12%",
-            top: "32%",
-            bottom: 0,
-            borderRadius: "50% 50% 46% 46% / 62% 62% 40% 40%",
-            background: `linear-gradient(160deg, ${fac.colors.primary}ee, ${fac.colors.dark})`,
-            border: `1px solid ${fac.colors.accent}55`,
-            boxShadow: isActor ? `0 0 16px ${fac.colors.accent}` : "0 2px 6px rgba(0,0,0,0.35)",
-            transition: "box-shadow 0.3s ease",
-          }}
-        />
-        {/* eyes */}
-        <span
-          className="absolute rounded-full"
-          style={{
-            width: big ? 7 : 5,
-            height: big ? 7 : 5,
-            left: "30%",
-            top: "40%",
-            background: "#EAF6FF",
-            boxShadow: "0 0 3px rgba(0,0,0,0.5)",
-          }}
-        />
-        <span
-          className="absolute rounded-full"
-          style={{
-            width: big ? 7 : 5,
-            height: big ? 7 : 5,
-            right: "30%",
-            top: "40%",
-            background: "#EAF6FF",
-            boxShadow: "0 0 3px rgba(0,0,0,0.5)",
-          }}
-        />
-        {/* class icon on the shell */}
-        <span
-          className="absolute left-1/2 -translate-x-1/2"
-          style={{ top: "58%", fontSize: big ? 18 : 13 }}
-          title={crab.classId}
-        >
-          {classIcon(crab.classId)}
-        </span>
+        {/* The crab itself — its own living sheet sprite (Phase 4:
+            this cell used to be a CSS blob of circles). */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <CrabSheetSprite
+            classId={crab.classId}
+            faction={crab.faction}
+            size={big ? 72 : 52}
+            state={defeated ? "death" : "idle"}
+            seedKey={crab.name}
+          />
+        </div>
         {/* defeated marker */}
         {defeated && (
           <span
@@ -1642,7 +1583,7 @@ export default function ReplayViewerModal({
     if (!loadedReplay) return null;
     return (
       <div
-        className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+        className="modal-backdrop-enter fixed inset-0 z-[160] flex items-center justify-center p-4"
         style={{ background: "rgba(4,16,32,0.62)", backdropFilter: "blur(4px)" }}
         role="dialog"
         aria-modal="true"
@@ -1738,7 +1679,7 @@ export default function ReplayViewerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
       style={{ background: "rgba(4,16,32,0.78)", backdropFilter: "blur(8px)" }}
       role="dialog"
       aria-modal="true"

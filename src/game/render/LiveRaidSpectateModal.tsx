@@ -27,6 +27,7 @@ import {
   factionColor,
   factionAccent,
 } from "./ui";
+import CrabSheetSprite from "../animation/CrabSheetSprite";
 
 // ---------- LOCAL TYPES ----------
 
@@ -688,7 +689,7 @@ export default function LiveRaidSpectateModal({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
       style={{
         background: "rgba(4,16,32,0.78)",
         backdropFilter: "blur(8px)",
@@ -1518,7 +1519,9 @@ function CrabSilhouette({
           : `linear-gradient(${mirrored ? "250deg" : "110deg"}, ${factionCol}33 0%, ${factionCol}11 100%)`,
         border: `1px solid ${crab.defeated ? "rgba(255,255,255,0.12)" : factionAcc + "55"}`,
         opacity: crab.defeated ? 0.55 : 1,
-        transform: mirrored ? "scaleX(-1)" : undefined,
+        // NOTE: no scaleX(-1) here — flipping the whole card also
+        // mirrored its name/HP text (unreadable). Facing is applied
+        // to the crab sprite itself below.
       }}
       aria-label={`${crab.name} (${CLASSES[crab.classId].name}) — HP ${Math.round(crab.hp)}/${crab.maxHp}${crab.defeated ? ", defeated" : ""}`}
     >
@@ -1544,13 +1547,13 @@ function CrabSilhouette({
         )}
       </div>
 
-      {/* Crab silhouette disc */}
+      {/* Crab portrait disc — the crab's own living sheet sprite */}
       <div className="relative flex items-center justify-center my-1">
         <div
-          className="rounded-full flex items-center justify-center"
+          className="relative rounded-full flex items-center justify-center overflow-hidden"
           style={{
-            width: 38,
-            height: 38,
+            width: 46,
+            height: 46,
             background: crab.defeated
               ? "rgba(60,60,60,0.4)"
               : `radial-gradient(circle at 50% 40%, ${factionCol}66 0%, ${factionCol}22 70%)`,
@@ -1558,11 +1561,17 @@ function CrabSilhouette({
             boxShadow: crab.defeated
               ? "none"
               : `0 0 10px ${factionCol}55, inset 0 0 8px ${factionAcc}33`,
-            fontSize: 20,
             filter: crab.defeated ? "grayscale(0.9)" : "none",
           }}
         >
-          <span aria-hidden>{CLASSES[crab.classId].icon}</span>
+          <CrabSheetSprite
+            classId={crab.classId}
+            faction={crab.faction}
+            size={42}
+            state={crab.defeated ? "death" : "idle"}
+            facing={mirrored ? "left" : "right"}
+            seedKey={crab.id}
+          />
           {crab.defeated && (
             <span
               className="absolute inset-0 flex items-center justify-center text-lg font-black"
@@ -1587,7 +1596,6 @@ function CrabSilhouette({
                     ? "#9BFFB0"
                     : "#FFFFFF",
               textShadow: "0 0 6px #000, 0 0 2px #000",
-              transform: mirrored ? "scaleX(-1)" : undefined,
             }}
           >
             {v.type === "heal" ? "+" : "-"}

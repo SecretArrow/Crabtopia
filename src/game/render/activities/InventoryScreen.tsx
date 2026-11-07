@@ -10,6 +10,7 @@ import { useGame } from "../../store/gameStore";
 import {
   GlowButton,
   GlassPanel,
+  EmptyState,
   RarityBadge,
   GoldIcon,
   rarityColor,
@@ -351,9 +352,11 @@ export default function InventoryScreen() {
                   </GlowButton>
                 </div>
                 {crabs.length === 0 ? (
-                  <div className="py-4 text-center text-xs text-white/40">
-                    No crabs available.
-                  </div>
+                  <EmptyState
+                    compact
+                    message="No crabs available"
+                    hint="Every crab is busy or already boosted."
+                  />
                 ) : (
                   <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
                     {crabs.map((crab) => {
@@ -373,7 +376,7 @@ export default function InventoryScreen() {
                             border: "1px solid rgba(124,245,225,0.18)",
                           }}
                         >
-                          <CrabSprite crab={crab} size={56} animated={false} />
+                          <CrabSprite crab={crab} size={56} />
                           <div className="mt-0.5 w-full truncate text-center text-[9px] font-bold">
                             {crab.name}
                           </div>

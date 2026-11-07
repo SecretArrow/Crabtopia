@@ -26,6 +26,7 @@ import React from "react";
 import type { Crab } from "../types";
 import { elementOf, type ElementId } from "../engine/elements";
 import { auraForElement } from "../data/elementAura";
+import { hashSeed } from "../animation/idleVariation";
 
 export interface ElementAuraProps {
   /** Element id directly, or pass a crab instead. */
@@ -42,6 +43,12 @@ export default function ElementAura({
   const id = element ?? (crab ? elementOf(crab) : undefined);
   if (!id) return null;
   const color = auraForElement(id);
+  // Per-instance pulse phase: every aura used to breathe on the same
+  // 3.2s cycle, so a grid of cards pulsed in lockstep. A deterministic
+  // hash of the crab (or element) staggers phase and period instead.
+  const phaseHash = hashSeed(crab?.id ?? `element:${id}`);
+  const pulseDelay = -((phaseHash % 3200) / 1000);
+  const pulseDuration = 2.9 + ((phaseHash >>> 8) % 60) / 100;
 
   if (variant === "battle") {
     return (
@@ -86,6 +93,8 @@ export default function ElementAura({
         style={{
           inset: "-6%",
           background: `radial-gradient(circle, ${color}52 0%, ${color}29 48%, transparent 72%)`,
+          animationDelay: `${pulseDelay}s`,
+          animationDuration: `${pulseDuration}s`,
         }}
       />
       {/* Element-tinted backdrop disc */}

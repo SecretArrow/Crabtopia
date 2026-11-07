@@ -47,7 +47,7 @@ export default function ArenaSplash({ onDive }: ArenaSplashProps): React.ReactNo
 
   return (
     <div
-      className="relative w-full overflow-hidden flex flex-col items-center justify-center px-4 py-10"
+      className="screen-enter relative w-full overflow-hidden flex flex-col items-center justify-center px-4 py-10"
       style={{
         minHeight: "100svh",
         background:

@@ -10,6 +10,7 @@ import { useGame } from "../../store/gameStore";
 import {
   GlowButton,
   GlassPanel,
+  EmptyState,
   formatTime,
   rarityColor,
 } from "../ui";
@@ -342,7 +343,7 @@ export default function MiningScreen() {
                 Active team
               </span>
               {teamCrabs.map((c) => (
-                <CrabRenderer key={c.id} crab={c} size={48} animate />
+                <CrabRenderer key={c.id} crab={c} size={48} />
               ))}
             </div>
           )}
@@ -482,9 +483,11 @@ export default function MiningScreen() {
           </div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(inv.materials).length === 0 && (
-              <span className="text-xs text-white/40">
-                No materials yet — mine a node!
-              </span>
+              <EmptyState
+                compact
+                message="No materials yet"
+                hint="Mine a node to start your stockpile."
+              />
             )}
             {Object.entries(inv.materials).map(([mid, count]) => {
               const m = MATERIALS[mid as MaterialId];

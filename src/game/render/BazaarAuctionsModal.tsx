@@ -17,7 +17,27 @@ import {
   RarityBadge,
   FactionBadge,
 } from "./ui";
-import type { FactionId, Rarity } from "../types";
+import type { ClassId, FactionId, Rarity } from "../types";
+import CrabSheetSprite from "../animation/CrabSheetSprite";
+import { CLASS_HOME_FACTION } from "../animation/sheetResolver";
+
+/** Auction/mock crabs carry their class in the display name. */
+function classFromItemName(name: string): ClassId {
+  const n = name.toLowerCase();
+  for (const cls of [
+    "bulwark",
+    "pincher",
+    "reaver",
+    "skitter",
+    "tidecaller",
+    "shellmender",
+    "warden",
+    "gildclaw",
+  ] as ClassId[]) {
+    if (n.includes(cls)) return cls;
+  }
+  return "pincher";
+}
 
 type Tab = "auctions" | "my-bids" | "make-offer" | "my-auctions";
 
@@ -144,7 +164,7 @@ function nextBidStep(current: number): number {
   return Math.max(50, Math.round(current * 0.05));
 }
 
-// ---------- Item thumbnail (CSS-built for egg, emoji for crab/gear) ----------
+// ---------- Item thumbnail (CSS-built egg, living sprite for crabs, emoji for gear) ----------
 function ItemThumbnail({ auction, size = 64 }: { auction: Auction; size?: number }) {
   const faction = auction.faction ? FACTIONS[auction.faction] : null;
   const accent = faction ? faction.colors.accent : "#7CF5E1";
@@ -188,7 +208,32 @@ function ItemThumbnail({ auction, size = 64 }: { auction: Auction; size?: number
     );
   }
 
-  const emoji = auction.itemType === "crab" ? "🦀" : gearEmoji(auction.imageHint);
+  if (auction.itemType === "crab") {
+    // Real living art, never an emoji: the crab's own class sheet.
+    const classId = classFromItemName(auction.itemName);
+    return (
+      <div
+        className="relative flex items-center justify-center shrink-0 rounded-xl overflow-hidden"
+        style={{
+          width: size,
+          height: size,
+          background: `radial-gradient(circle at 35% 30%, ${primary}33, ${dark}cc 80%)`,
+          border: `1px solid ${accent}44`,
+          boxShadow: `inset 0 0 8px ${primary}33`,
+        }}
+        aria-hidden
+      >
+        <CrabSheetSprite
+          classId={classId}
+          faction={auction.faction ?? CLASS_HOME_FACTION[classId]}
+          size={Math.round(size * 0.92)}
+          seedKey={auction.id}
+        />
+      </div>
+    );
+  }
+
+  const emoji = gearEmoji(auction.imageHint);
   return (
     <div
       className="relative flex items-center justify-center shrink-0 rounded-xl text-2xl"
@@ -533,7 +578,7 @@ export function BazaarAuctionsModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4"
       style={{ background: "rgba(4,12,32,0.78)", backdropFilter: "blur(10px)" }}
       onClick={onClose}
     >

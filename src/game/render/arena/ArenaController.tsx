@@ -303,8 +303,13 @@ export default function ArenaController() {
   // Fallback: if we somehow have no opponents cached yet, show loading state
   if (step === "opponent_list" && !opponentsCache) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Summoning challengers...
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-white">
+        <div
+          className="w-10 h-10 rounded-full border-2 border-white/15 animate-spin"
+          style={{ borderTopColor: "#7CF5E1" }}
+          aria-hidden
+        />
+        <div className="animate-pulse text-sm">Summoning challengers...</div>
       </div>
     );
   }

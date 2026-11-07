@@ -26,6 +26,7 @@ import {
   FactionBadge,
   ClassIcon,
 } from "./ui";
+import CrabSheetSprite from "../animation/CrabSheetSprite";
 
 // ---------- LOCAL TYPES ----------
 
@@ -473,7 +474,13 @@ function LiveCrabCard({
       <div
         className={`flex items-center gap-1.5 ${reverse ? "flex-row-reverse" : ""}`}
       >
-        <ClassIcon classId={crab.classId} size={20} />
+        <CrabSheetSprite
+          classId={crab.classId}
+          faction={crab.faction}
+          size={34}
+          state={isDead ? "death" : "idle"}
+          seedKey={crab.name}
+        />
         <div className={`min-w-0 flex-1 ${reverse ? "text-right" : ""}`}>
           <div className="text-xs font-bold truncate">{crab.name}</div>
           <div className="text-[9px] text-white/50">
@@ -938,7 +945,7 @@ export default function TournamentModal({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4"
       style={{
         background: "rgba(4,16,32,0.78)",
         backdropFilter: "blur(8px)",

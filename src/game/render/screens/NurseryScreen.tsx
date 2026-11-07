@@ -25,6 +25,7 @@ import { CONFIG } from "../../engine/config";
 import { checkBreedingEligibility, breedCost, computeGeneOdds } from "../../engine/genetics";
 import { Crab, BodyPartSlot } from "../../types";
 import CrabRenderer from "../CrabRenderer";
+import { hashSeed } from "../../animation/idleVariation";
 import CrabCard from "../CrabCard";
 import ElementBadge from "../ElementBadge";
 import { Modal } from "../Modal";
@@ -342,6 +343,7 @@ export default function NurseryScreen() {
                           ? "drop-shadow(0 0 10px rgba(255,209,102,0.85))"
                           : "saturate(0.55) brightness(0.8)",
                         animation: isReady ? "glowPulse 1.8s ease-in-out infinite" : undefined,
+                      animationDelay: `${-(hashSeed(egg.id) % 2600) / 1000}s`,
                       }}
                     />
                   </div>
@@ -552,7 +554,7 @@ function ParentSlot({
                       className="shrink-0 rounded-md overflow-hidden"
                       style={{ background: `${f.colors.dark}55`, border: `1px solid ${f.colors.primary}44` }}
                     >
-                      <CrabRenderer crab={c} size={44} animate={false} showEmblem={false} />
+                      <CrabRenderer crab={c} size={44} showEmblem={false} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold truncate" style={{ color: f.colors.light }}>
