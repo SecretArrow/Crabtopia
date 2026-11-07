@@ -314,6 +314,15 @@ their card treatment — §9 targets the live battlefield only.
   unit property. Ranged/AoE ignore reach as today. Damage formula,
   element effectiveness, combo counter, AoE 0.85 factor and shield
   absorption carry over unchanged.
+- **Amendment (common-sense battle logic round): basic-attack reach
+  follows the class profile, not the skill visual.** Claw Strike's
+  visual is a claw for every class, which used to bind even band
+  classes to the frontmost-row pool. `BASIC_ATTACK_RANGE` in
+  arenaEngine now classifies the basic attack by actor class: Warden,
+  Tidecaller and Shellmender basics are ranged (any row targetable,
+  delivered from their bands as before); contact classes stay melee.
+  Backline Protection ×0.8 still applies to back-row targets while
+  their front stands — reach changed, protection did not.
 
 ### 5.3 Pilot (AI) per unit
 

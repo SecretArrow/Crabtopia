@@ -521,6 +521,25 @@ export function skillRange(skill: ArenaSkill): SkillRange {
     : "melee";
 }
 
+/**
+ * Reach of a class's BASIC attack (Claw Strike) — follows the class's
+ * range profile, not the skill's claw visual. Warden, Tidecaller and
+ * Shellmender fight from engagement bands (they cast/bolt their basics
+ * from range, exactly as the sim's delivery already treats them), so
+ * their basics may target any row. True contact classes stay bound by
+ * the melee reach rule (frontmost living row only). See design §5.2.
+ */
+export const BASIC_ATTACK_RANGE: Record<ClassId, "melee" | "ranged"> = {
+  bulwark: "melee",
+  reaver: "melee",
+  skitter: "melee",
+  pincher: "melee",
+  gildclaw: "melee",
+  warden: "ranged",
+  tidecaller: "ranged",
+  shellmender: "ranged",
+};
+
 /** The frontmost row of `side` that still has a living combatant. */
 export function frontmostAliveRow(
   state: ArenaBattleState,
@@ -542,7 +561,15 @@ export function legalEnemyTargets(
   const enemySide: "player" | "enemy" =
     actor.side === "player" ? "enemy" : "player";
   const enemies = aliveOnSide(state, enemySide);
-  if (skillRange(skill) !== "melee") return enemies;
+  // The basic Claw Strike's reach follows the ACTOR's class profile:
+  // ranged-profile classes (Warden/Tidecaller/Shellmender) strike from
+  // their bands, so their basics are not frontmost-row-bound even
+  // though the skill's visual is a claw (design §5.2 amendment).
+  const range =
+    skill.id === "claw_strike"
+      ? BASIC_ATTACK_RANGE[actor.classId]
+      : skillRange(skill);
+  if (range !== "melee") return enemies;
   const row = frontmostAliveRow(state, enemySide);
   return row ? enemies.filter((c) => c.row === row) : enemies;
 }

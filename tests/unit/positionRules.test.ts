@@ -147,6 +147,38 @@ describe("melee reach & target legality", () => {
     const legal = legalEnemyTargets(state, actor, claw);
     expect(legal.map((c) => c.crabId)).toEqual([mid.id]);
   });
+
+  it("ranged-profile classes strike the back row with their BASIC attack", () => {
+    // Common-sense reach (design §5.2 amendment): Warden, Tidecaller
+    // and Shellmender deliver their Claw Strike from their engagement
+    // bands, so the basic attack is not frontmost-row-bound for them —
+    // while a true contact class (Bulwark) stays frontmost-only.
+    const rangedClasses: ClassId[] = ["warden", "tidecaller", "shellmender"];
+    const player = [
+      ...rangedClasses.map((c, i) => mkCrab(c, 40 + i, BIG)),
+      mkCrab("bulwark", 49, BIG),
+    ];
+    const tank = mkCrab("bulwark", 3, { ...BIG, hp: 5000 });
+    const squishy = mkCrab("shellmender", 4, { ...BIG, hp: 30 });
+    const mid = mkCrab("pincher", 5, { ...BIG, hp: 800 });
+    const enemyFormation: Formation = {
+      front: [tank.id],
+      mid: [mid.id],
+      back: [squishy.id],
+    };
+    const state = initBattle(player, [tank, mid, squishy], 7, {
+      enemyFormation,
+    });
+    const claw = getSkillsForClass("reaver")[0]; // Claw Strike, shared by all
+    for (const actor of state.player.slice(0, 3)) {
+      const legal = legalEnemyTargets(state, actor, claw);
+      expect(legal.map((c) => c.crabId)).toContain(squishy.id);
+      expect(legal.map((c) => c.crabId)).toContain(mid.id);
+    }
+    const bulwark = state.player[3];
+    const legal = legalEnemyTargets(state, bulwark, claw);
+    expect(legal.map((c) => c.crabId)).toEqual([tank.id]);
+  });
 });
 
 describe("positionDamageFactor", () => {
