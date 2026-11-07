@@ -8,11 +8,12 @@ import { FACTIONS } from "../content/factions";
 import { CLASSES } from "../content/classes";
 import { TACTIC_CARDS } from "../engine/battle";
 import { crabBaseBP, teamBP, formatBP } from "../engine/bp";
-import { formatGold, formatTime } from "./ui";
+import { formatGold, formatTime, GoldIcon } from "./ui";
 import { CONFIG } from "../engine/config";
 import { TacticCardId, Crab, Formation } from "../types";
 import CrabRenderer from "./CrabRenderer";
 import CrabCard from "./CrabCard";
+import LootReveal from "./LootReveal";
 import { Modal } from "./Modal";
 
 interface Props {
@@ -33,6 +34,14 @@ export default function RaidModal({ siteId, onClose }: Props) {
   const [formation, setFormation] = useState<Formation>({ front: [], mid: [], back: [] });
   const [reinforcements, setReinforcements] = useState<string[]>([]);
   const [step, setStep] = useState<1 | 2>(1);
+  // Victory spoils reveal: launchRaid has ALREADY credited the gold
+  // (exactly once, through its normal path) — this is presentation of
+  // the granted amount, measured as the real gold delta.
+  const [raidLoot, setRaidLoot] = useState<{
+    net: number;
+    stolen: number;
+    participation: number;
+  } | null>(null);
 
   // When the selected team changes, initialise the local raid formation
   // from the team's saved formation (player can still edit it locally).
@@ -85,6 +94,7 @@ export default function RaidModal({ siteId, onClose }: Props) {
 
   const handleLaunch = () => {
     if (!team || teamCrabs.length !== 5) return;
+    const goldBefore = useGame.getState().player?.gold ?? 0;
     const result = launchRaid(
       siteId,
       team.id,
@@ -93,11 +103,60 @@ export default function RaidModal({ siteId, onClose }: Props) {
       formation,
       reinforcements
     );
-    if (result) {
-      onClose();
-      setScreen("home");
+    if (!result) return;
+    if (result.result?.winner === "raider") {
+      const net = (useGame.getState().player?.gold ?? 0) - goldBefore;
+      if (net > 0) {
+        // Keep the modal open on the spoils reveal; Continue performs
+        // the usual close + home navigation.
+        setRaidLoot({
+          net,
+          stolen: result.result.stolenAmount,
+          participation: result.result.participationReward,
+        });
+        return;
+      }
     }
+    onClose();
+    setScreen("home");
   };
+
+  if (raidLoot) {
+    return (
+      <Modal title="🎉 Raid Spoils" onClose={onClose} maxWidth="max-w-lg">
+        <LootReveal
+          variant="chest"
+          title="The vault cracks open…"
+          subtitle={`${site.name} has been plundered.`}
+          items={[
+            {
+              key: "gold",
+              name: "GOLD",
+              amount: raidLoot.net,
+              icon: <GoldIcon size={22} />,
+              accent: "#FFD166",
+              amountLabel: formatGold(raidLoot.net),
+            },
+          ]}
+          notes={[
+            `Stolen ${formatGold(raidLoot.stolen)} · Participation ${formatGold(
+              raidLoot.participation
+            )}`,
+            "Already credited to your purse (after any Tide Tithe).",
+          ]}
+          totalLabel="Spoils"
+          totalAmount={raidLoot.net}
+          totalIcon={<GoldIcon size={16} />}
+          totalFormat={(n) => `${formatGold(n)} GOLD`}
+          actionLabel="Continue"
+          onAction={() => {
+            onClose();
+            setScreen("home");
+          }}
+        />
+      </Modal>
+    );
+  }
 
   if (step === 1) {
     return (

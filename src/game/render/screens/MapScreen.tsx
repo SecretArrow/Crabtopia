@@ -6,6 +6,7 @@ import { useGame } from "../../store/gameStore";
 import { FACTIONS } from "../../content/factions";
 import {
   formatTime,
+  formatGold,
   GoldIcon,
   GlowButton,
   GradientCard,
@@ -16,6 +17,10 @@ import {
   PlanktonField,
 } from "../ui";
 import { CONFIG, STAMINA_COSTS } from "../../engine/config";
+import { peekDiveReward, type DiveRewardPeek } from "../../engine/diveReward";
+import { splitGoldPops } from "../../engine/lootReveal";
+import MiningScene, { diveSiteTheme } from "../MiningScene";
+import type { LootRevealItem } from "../LootReveal";
 import RaidModal from "../RaidModal";
 import TeamSelect from "../TeamSelect";
 import { Modal } from "../Modal";
@@ -51,6 +56,40 @@ export default function MapScreen() {
   const [showDeploy, setShowDeploy] = useState<string | null>(null);
   const [showRaid, setShowRaid] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  // "Watch the Dig": the completed dive being played out. The peek is
+  // snapshotted at open time from the same math claimDive will run —
+  // the scene's Claim button calls claimDive itself, so watched and
+  // direct claims grant identically.
+  const [watchDive, setWatchDive] = useState<{
+    siteId: string;
+    peek: DiveRewardPeek;
+  } | null>(null);
+
+  const handleWatchDive = (site: DigSite) => {
+    setWatchDive({ siteId: site.id, peek: peekDiveReward(player, site) });
+  };
+  const watchSite = watchDive
+    ? worldSites.find((s) => s.id === watchDive.siteId)
+    : undefined;
+  const watchTeam =
+    watchSite && player
+      ? player.teams.find((t) => t.id === watchSite.teamId)
+      : undefined;
+  const watchCrabs = watchTeam
+    ? watchTeam.crabIds
+        .map((id) => player.crabs.find((c) => c.id === id))
+        .filter(Boolean) as typeof player.crabs
+    : [];
+  const watchLoot: LootRevealItem[] = watchDive
+    ? splitGoldPops(watchDive.peek.net).map((amt, i) => ({
+        key: `gold-${i}`,
+        name: "GOLD",
+        amount: amt,
+        icon: <GoldIcon size={18} />,
+        accent: "#FFD166",
+        amountLabel: formatGold(amt),
+      }))
+    : [];
 
   // tick for timer refresh
   const [, setTick] = useState(0);
@@ -406,6 +445,7 @@ export default function MapScreen() {
             onDeploy={() => setShowDeploy(selectedSite.id)}
             onRaid={() => setShowRaid(selectedSite.id)}
             onClaim={() => claimDive(selectedSite.id)}
+            onWatch={() => handleWatchDive(selectedSite)}
             onRetreat={() => retreatDive(selectedSite.id)}
           />
         </div>
@@ -413,6 +453,39 @@ export default function MapScreen() {
 
       {showDeploy && <DeployModal siteId={showDeploy} onClose={() => setShowDeploy(null)} />}
       {showRaid && <RaidModal siteId={showRaid} onClose={() => setShowRaid(null)} />}
+
+      {/* Watched dig for a completed dive — presentation only; its
+          Claim runs the same claimDive as the buttons. */}
+      {watchDive && watchSite && (
+        <MiningScene
+          title={`The dig at ${watchSite.name}`}
+          subtitle="Your team's haul, already earned — watch them dig it up."
+          crabs={watchCrabs}
+          theme={diveSiteTheme(FACTIONS[watchSite.biome].colors)}
+          loot={watchLoot}
+          claimLabel={`Claim ${formatGold(watchDive.peek.net)} GOLD`}
+          finaleTitle={`${watchSite.name} — haul complete!`}
+          finaleNotes={[
+            `Gross haul ${formatGold(watchDive.peek.gross)} GOLD` +
+              (watchDive.peek.bonus > 0
+                ? ` (incl. Gildclaw bonus +${formatGold(watchDive.peek.bonus)})`
+                : ""),
+            ...(watchDive.peek.tax > 0
+              ? [`Tide Tithe: −${formatGold(watchDive.peek.tax)}`]
+              : []),
+            `+${watchDive.peek.xp} XP for the Shellwarden`,
+          ]}
+          totalLabel="You receive"
+          totalAmount={watchDive.peek.net}
+          totalIcon={<GoldIcon size={16} />}
+          totalFormat={(n) => `${formatGold(n)} GOLD`}
+          onClaim={() => {
+            claimDive(watchDive.siteId);
+            setWatchDive(null);
+          }}
+          onClose={() => setWatchDive(null)}
+        />
+      )}
 
       {/* Sites list (scrollable grid) */}
       <div className="mt-3 flex flex-col min-h-0">
@@ -429,6 +502,7 @@ export default function MapScreen() {
                 onDeploy={() => setShowDeploy(s.id)}
                 onRaid={() => setShowRaid(s.id)}
                 onClaim={() => claimDive(s.id)}
+                onWatch={() => handleWatchDive(s)}
               />
             ))}
           </div>
@@ -464,12 +538,14 @@ function SiteListCard({
   onDeploy,
   onRaid,
   onClaim,
+  onWatch,
 }: {
   site: DigSite;
   onClick: () => void;
   onDeploy: () => void;
   onRaid: () => void;
   onClaim: () => void;
+  onWatch: () => void;
 }) {
   const f = FACTIONS[site.biome];
   const isPlayer = site.ownerIsPlayer;
@@ -518,16 +594,21 @@ function SiteListCard({
       </div>
 
       {/* Action button */}
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex justify-end gap-2">
         {!site.occupiedBy && (
           <GlowButton variant="teal" size="sm" onClick={onDeploy}>
             Deploy here
           </GlowButton>
         )}
         {isPlayer && isCompleted && (
-          <GlowButton variant="gold" size="sm" onClick={onClaim}>
-            Claim {Math.round(site.rewardRemaining)}
-          </GlowButton>
+          <>
+            <GlowButton variant="teal" size="sm" onClick={onWatch}>
+              ▶ Watch the Dig
+            </GlowButton>
+            <GlowButton variant="gold" size="sm" onClick={onClaim}>
+              Claim {Math.round(site.rewardRemaining)}
+            </GlowButton>
+          </>
         )}
         {isRaidable && (
           <GlowButton variant="rose" size="sm" onClick={onRaid}>
@@ -539,12 +620,13 @@ function SiteListCard({
   );
 }
 
-function SiteDetailPanel({ site, onClose, onDeploy, onRaid, onClaim, onRetreat }: {
+function SiteDetailPanel({ site, onClose, onDeploy, onRaid, onClaim, onWatch, onRetreat }: {
   site: DigSite;
   onClose: () => void;
   onDeploy: () => void;
   onRaid: () => void;
   onClaim: () => void;
+  onWatch: () => void;
   onRetreat: () => void;
 }) {
   const f = FACTIONS[site.biome];
@@ -592,7 +674,10 @@ function SiteDetailPanel({ site, onClose, onDeploy, onRaid, onClaim, onRetreat }
           <GlowButton variant="teal" onClick={onDeploy}>⛏️ Deploy Team</GlowButton>
         )}
         {isPlayer && isCompleted && (
-          <GlowButton variant="gold" onClick={onClaim}>Claim {Math.round(site.rewardRemaining)}</GlowButton>
+          <>
+            <GlowButton variant="teal" onClick={onWatch}>▶ Watch the Dig</GlowButton>
+            <GlowButton variant="gold" onClick={onClaim}>Claim {Math.round(site.rewardRemaining)}</GlowButton>
+          </>
         )}
         {isPlayer && site.state === "deployed" && (
           <GlowButton variant="ghost" onClick={onRetreat}>🏳️ Retreat</GlowButton>
