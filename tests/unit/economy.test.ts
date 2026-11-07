@@ -113,7 +113,10 @@ describe("applyGoldCredit", () => {
     expect(eco.totalBurned).toBe(25);
     expect(eco.treasury).toBe(25);
     expect(eco.treasuryIn).toBe(25);
-    expect(eco.totalMinted).toBe(950); // minted NET of tithe
+    // v2 supply accounting: totalMinted counts gold CREATED (the full
+    // 1,000 gross); the tithe's burned 25 is counted in totalBurned, so
+    // created − burned = 975 = net 950 (player) + 25 (Treasury share).
+    expect(eco.totalMinted).toBe(1000);
     expect(eco.treasuryOut).toBe(0);
   });
 
@@ -148,7 +151,10 @@ describe("applyGoldCredit", () => {
     const eco = economyOf(r.player);
     expect(eco.treasury).toBe(25); // 100 − 100 paid out + 25 tithe share in
     expect(eco.treasuryOut).toBe(100);
-    expect(eco.totalMinted).toBe(850); // 950 net − 100 from treasury
+    // v2: created = gross 1,000 − 100 sourced from the Treasury = 900
+    // (the tithe share is created gold sitting in the Treasury; only
+    // Treasury-SOURCED portions are transfers, not creation).
+    expect(eco.totalMinted).toBe(900);
   });
 
   it("non-positive credits are a no-op (same player reference)", () => {
@@ -262,7 +268,9 @@ describe("store wiring", () => {
     expect(eco.totalBurned).toBe(7);
     expect(eco.treasury).toBe(8);
     expect(eco.treasuryIn).toBe(8);
-    expect(eco.totalMinted).toBe(485);
+    // v2: created = the full 500 gross (485 net + 15 tithe, of which 7
+    // burned — counted in totalBurned — and 8 to the Treasury).
+    expect(eco.totalMinted).toBe(500);
   });
 
   it("refundGold is exempt: no tithe and no minted counter, even at 600,000", () => {
