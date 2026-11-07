@@ -6,6 +6,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useGame } from "../store/gameStore";
+import { useLocalStorage } from "./useLocalStorage";
 import {
   GlassPanel,
   GlowButton,
@@ -459,6 +460,7 @@ export function DefenseHubModal({ onClose }: { onClose: () => void }) {
   const player = useGame((s) => s.player);
   const worldSites = useGame((s) => s.worldSites);
   const spendGold = useGame((s) => s.spendGold);
+  const setGuardPostLevelStore = useGame((s) => s.setGuardPostLevel);
   const pushToast = useGame((s) => s.pushToast);
 
   // ---- local state -------------------------------------------------------
@@ -466,9 +468,13 @@ export function DefenseHubModal({ onClose }: { onClose: () => void }) {
   const [guardPostLevel, setGuardPostLevel] = useState<GuardPostLevel>(
     Math.max(0, Math.min(3, player?.guardPostLevel ?? 0)) as GuardPostLevel
   );
-  const [activeInsurancePolicies, setActiveInsurancePolicies] = useState<
+  // Insurance policies are paid for with real gold and carry an expiry —
+  // they persist across modal opens (expired ones are filtered by
+  // isInsured). They used to reset to [] on every mount, so a policy
+  // bought minutes ago simply vanished when the modal closed.
+  const [activeInsurancePolicies, setActiveInsurancePolicies] = useLocalStorage<
     { siteId: string; expiresAt: number; price: number }[]
-  >([]);
+  >("crabtopia_defense_insurance_v1", []);
   const [mockBounties] = useState<Bounty[]>(MOCK_BOUNTIES);
   const [myPostedBounties, setMyPostedBounties] = useState<Bounty[]>([]);
 
@@ -550,6 +556,9 @@ export function DefenseHubModal({ onClose }: { onClose: () => void }) {
     const target = nextTier;
     if (spendGold(target.cost)) {
       setGuardPostLevel(target.level);
+      // Write through to the persisted profile — without this the paid
+      // upgrade evaporated on modal close and could be re-bought.
+      setGuardPostLevelStore(target.level);
       pushToast({
         title: `Guard Post upgraded to L${target.level}!`,
         description: target.blurb,

@@ -112,6 +112,7 @@ interface GameState {
   // progression
   addGold: (amount: number) => void;
   spendGold: (amount: number) => boolean;
+  setGuardPostLevel: (level: number) => void;
   addXp: (amount: number) => void;
   claimQuest: (questId: string) => void;
   /** Bump a quest's progress by `amount` (clamped at target). Generic hook so
@@ -1396,6 +1397,16 @@ export const useGame = create<GameState>()(
         if (player.gold < amount) return false;
         set({ player: { ...player, gold: player.gold - amount } });
         return true;
+      },
+
+      // Guard Post level lives in the profile (persisted save). The
+      // Defense Hub used to keep upgrades in modal-local state only, so
+      // a paid upgrade silently evaporated when the modal closed.
+      setGuardPostLevel: (level) => {
+        const player = get().player;
+        if (!player) return;
+        const clamped = Math.max(0, Math.min(3, Math.floor(level)));
+        set({ player: { ...player, guardPostLevel: clamped } });
       },
 
       addXp: (amount) => {

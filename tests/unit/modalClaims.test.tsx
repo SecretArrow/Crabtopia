@@ -193,7 +193,7 @@ describe("DefenseHubModal", () => {
 
     render(<DefenseHubModal onClose={noop} />);
     // Still Level 1 after reopen — the next purchase is L2, not L1 again.
-    expect(screen.getByText("Wooden Palisade")).toBeTruthy();
+    expect(screen.getAllByText("Wooden Palisade").length).toBeGreaterThanOrEqual(1);
     fireEvent.click(screen.getByRole("button", { name: "Upgrade to L2" }));
     expect(useGame.getState().player!.guardPostLevel).toBe(2);
     expect(gold()).toBe(g0 - 2000 - 6000);
