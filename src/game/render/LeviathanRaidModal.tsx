@@ -6,7 +6,9 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import { useGame } from "../store/gameStore";
+import LivingCrab from "../animation/LivingCrab";
 import { FACTIONS } from "../content/factions";
 import { CLASSES } from "../content/classes";
 import { Crab, FactionId, ClassId } from "../types";
@@ -331,7 +333,7 @@ function MiniCrabPortrait({ crab, size = 28 }: { crab: Crab; size?: number }) {
   );
 }
 
-function SquadCard({ member }: { member: RaidMember }) {
+function SquadCard({ member, flash = false }: { member: RaidMember; flash?: boolean }) {
   const faction = FACTIONS[member.faction];
   const hpRatio = member.squadMaxHP > 0 ? member.squadHP / member.squadMaxHP : 0;
   return (
@@ -340,7 +342,9 @@ function SquadCard({ member }: { member: RaidMember }) {
       style={{
         background: `linear-gradient(160deg, ${faction.colors.dark}cc, ${faction.colors.primary}0f)`,
         border: member.isPlayer ? "2px solid #FFD166" : `1px solid ${faction.colors.primary}55`,
-        boxShadow: member.isPlayer
+        boxShadow: flash
+          ? "0 0 18px rgba(255,61,90,0.85)"
+          : member.isPlayer
           ? "0 0 14px rgba(255,209,102,0.4)"
           : `0 2px 8px rgba(0,0,0,0.3)`,
       }}
@@ -468,6 +472,24 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
   // the reward effect fires) — the victory screen shows the REAL
   // number, not the headline 5,000.
   const [victoryGold, setVictoryGold] = useState<number | null>(null);
+  // Battle-line exchange: the last turn's already-computed numbers,
+  // visualized as the attacker's clip + floating damage (cleared
+  // after ~1.1s). The turn's damage is produced by processTurn first;
+  // this only presents it, so watching changes nothing.
+  const [exchange, setExchange] = useState<{
+    key: number;
+    playerCrabId: string | null;
+    playerCrabName: string;
+    dmgToBoss: number;
+    bossDmg: number;
+    bossTargetId: string | null;
+    bossTargetName: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!exchange) return;
+    const t = window.setTimeout(() => setExchange(null), 1100);
+    return () => window.clearTimeout(t);
+  }, [exchange]);
 
   // ----- REFS (avoid stale closures in setTimeout) -----
   const stateRef = useRef({ raidState, phase, bossHP, turn, raidMembers });
@@ -638,6 +660,14 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
       const currentPhase = p;
       const turnNum = t;
       const logs: LogEntry[] = [];
+      // Exchange numbers (captured as the turn is computed, presented
+      // by the battle-line strip right after — see setExchange below).
+      let playerDmg = 0;
+      let playerCrabId: string | null = null;
+      let playerCrabName = "";
+      let bossDmg = 0;
+      let bossTargetId: string | null = null;
+      let bossTargetName = "";
 
       // Player action
       const pMember = currentMembers[0];
@@ -654,6 +684,9 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
             );
             currentBossHP = Math.max(0, currentBossHP - dmg);
             pMember.contributionDamage += dmg;
+            playerDmg = dmg;
+            playerCrabId = picked.id;
+            playerCrabName = picked.name;
             logs.push({
               turn: turnNum,
               actor: pMember.name,
@@ -694,6 +727,9 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
           const variance = 0.8 + Math.random() * 0.5;
           const defendMod = target.defending ? 0.5 : 1;
           const dmg = Math.max(1, Math.round(baseDmg * variance * defendMod));
+          bossDmg = dmg;
+          bossTargetId = target.id;
+          bossTargetName = target.isPlayer ? "your squad" : target.name;
           target.squadHP = Math.max(0, target.squadHP - dmg);
           logs.push({
             turn: turnNum,
@@ -759,6 +795,20 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
       setRaidMembers(currentMembers);
       setRaidLog((prev) => [...prev, ...logs].slice(-40));
       setTurn((t2) => t2 + 1);
+      // Present the turn that was just computed: the attacking crab's
+      // clip + floating damage on the boss, and the boss's hit flashing
+      // the targeted squad. Numbers only — the outcome is already set.
+      if (playerDmg > 0 || bossDmg > 0) {
+        setExchange({
+          key: turnNum,
+          playerCrabId,
+          playerCrabName,
+          dmgToBoss: playerDmg,
+          bossDmg,
+          bossTargetId,
+          bossTargetName,
+        });
+      }
 
       if (nextState !== "active" && mountedRef.current) {
         setTimeout(() => {
@@ -1187,10 +1237,82 @@ export default function LeviathanRaidModal({ onClose }: { onClose: () => void })
                 </div>
               </div>
 
+              {/* Battle line: your squad's real sprites vs the boss —
+                  the last turn's exchange plays out here (attacker clip
+                  + floating damage). Pure presentation of numbers
+                  processTurn already computed. */}
+              <div
+                data-testid="leviathan-battle-line"
+                className="relative rounded-2xl p-3 flex items-center justify-between gap-2 overflow-hidden"
+                style={{
+                  background: "rgba(6,9,28,0.6)",
+                  border: "1px solid rgba(122,92,255,0.25)",
+                }}
+              >
+                <div className="relative flex items-end gap-0.5 min-w-0">
+                  {playerSquad.map((c) => (
+                    <div
+                      key={c.id}
+                      className="relative"
+                      style={{
+                        filter:
+                          exchange?.playerCrabId === c.id
+                            ? "drop-shadow(0 0 8px rgba(255,209,102,0.9))"
+                            : undefined,
+                      }}
+                    >
+                      <LivingCrab
+                        crab={c}
+                        size={52}
+                        state={
+                          exchange?.playerCrabId === c.id ? "attack" : "idle"
+                        }
+                      />
+                    </div>
+                  ))}
+                  {exchange && exchange.bossDmg > 0 && !reducedMotion && (
+                    <motion.span
+                      key={`boss-hit-${exchange.key}`}
+                      className="absolute -top-1 left-1/2 text-sm font-black pointer-events-none"
+                      style={{ color: "#FF3D5A", textShadow: "0 0 8px rgba(255,61,90,0.8)" }}
+                      initial={{ y: 6, opacity: 0 }}
+                      animate={{ y: -22, opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.0, ease: "easeOut" }}
+                    >
+                      -{exchange.bossDmg}
+                    </motion.span>
+                  )}
+                </div>
+                <div className="shrink-0 text-lg font-black text-white/30">VS</div>
+                <div className="relative shrink-0 w-[130px]">
+                  <LeviathanSilhouette
+                    phase={phase}
+                    reduced={reducedMotion}
+                    shaking={shakeBoss || (exchange?.dmgToBoss ?? 0) > 0}
+                  />
+                  {exchange && exchange.dmgToBoss > 0 && !reducedMotion && (
+                    <motion.span
+                      key={`boss-dmg-${exchange.key}`}
+                      className="absolute top-2 left-1/2 text-sm font-black pointer-events-none"
+                      style={{ color: "#FFD166", textShadow: "0 0 8px rgba(255,209,102,0.9)" }}
+                      initial={{ y: 6, opacity: 0 }}
+                      animate={{ y: -24, opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.0, ease: "easeOut" }}
+                    >
+                      -{formatGold(exchange.dmgToBoss)}
+                    </motion.span>
+                  )}
+                </div>
+              </div>
+
               {/* Squad cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {raidMembers.map((m) => (
-                  <SquadCard key={m.id} member={m} />
+                  <SquadCard
+                    key={m.id}
+                    member={m}
+                    flash={exchange?.bossTargetId === m.id}
+                  />
                 ))}
               </div>
 
