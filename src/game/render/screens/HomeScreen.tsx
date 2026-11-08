@@ -2,7 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useGame } from "../../store/gameStore";
+import type { Crab, Team } from "../../types";
+import { useMotionAllowed } from "../AmbientLife";
 import { CONFIG, QUESTS } from "../../engine/config";
 import {
   formatTime,
@@ -88,7 +91,21 @@ export default function HomeScreen() {
   const idleTeams = player.teams.filter((t) => t.crabIds.filter(Boolean).length === 5);
   const recentRaids = player.raids.slice(0, 5);
 
-  // Hero crab preview: pick a non-rookie if any, else first crab
+  const motionAllowed = useMotionAllowed();
+
+  // Living nest: the default team's crabs (their real sprites, idle
+  // clips + seeded idle variation inside LivingCrab) instead of a
+  // single static hero crab. Default = the first full 5-crab team,
+  // else the fullest team; the single-crab hero only remains as a
+  // fallback when no team exists yet.
+  const filledCount = (t: Team) => t.crabIds.filter(Boolean).length;
+  const defaultTeam =
+    player.teams.find((t) => filledCount(t) === 5) ??
+    [...player.teams].sort((a, b) => filledCount(b) - filledCount(a))[0];
+  const nestCrabs = (defaultTeam?.crabIds ?? [])
+    .map((id) => player.crabs.find((c) => c.id === id))
+    .filter((c): c is Crab => !!c);
+  // Hero crab preview (fallback only): pick a non-rookie if any, else first crab
   const heroCrab = player.crabs.find((c) => !c.isRookie) ?? player.crabs[0];
 
   return (
@@ -144,19 +161,40 @@ export default function HomeScreen() {
             </GlowButton>
           </div>
 
-          {/* Right: hero crab */}
-          {heroCrab && (
-            <div className="hidden md:flex flex-col items-end justify-center">
-              <div
-                className="relative"
-                style={{
-                  filter: `drop-shadow(0 8px 24px ${FACTIONS[heroCrab.faction].colors.primary}66)`,
-                }}
-              >
-                <CrabRenderer crab={heroCrab} size={150} pose="walk" />
-              </div>
-            </div>
-          )}
+          {/* Right: living nest — the default team's crabs, wandering
+              slowly in place; single hero crab only as a fallback. */}
+          <div className="flex flex-col items-center justify-center gap-1 md:items-end">
+            {nestCrabs.length > 0 ? (
+              <>
+                <div
+                  data-testid="home-nest"
+                  className="flex flex-wrap items-end justify-center gap-1 md:gap-2"
+                >
+                  {nestCrabs.map((crab) => (
+                    <NestCrab
+                      key={crab.id}
+                      crab={crab}
+                      motionAllowed={motionAllowed}
+                    />
+                  ))}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest opacity-60 font-display">
+                  {defaultTeam!.name} · {nestCrabs.length}/5 at home
+                </div>
+              </>
+            ) : (
+              heroCrab && (
+                <div
+                  className="relative"
+                  style={{
+                    filter: `drop-shadow(0 8px 24px ${FACTIONS[heroCrab.faction].colors.primary}66)`,
+                  }}
+                >
+                  <CrabRenderer crab={heroCrab} size={150} pose="walk" />
+                </div>
+              )
+            )}
+          </div>
         </div>
       </div>
 
@@ -789,6 +827,44 @@ export default function HomeScreen() {
       {showLeaderboards && <LeaderboardModal onClose={() => setShowLeaderboards(false)} />}
       {showReplay && <ReplayViewerModal onClose={() => setShowReplay(false)} />}
     </div>
+  );
+}
+
+// ---------- NEST CRAB (slow wander, seeded per crab) ----------
+function NestCrab({
+  crab,
+  motionAllowed,
+}: {
+  crab: Crab;
+  motionAllowed: boolean;
+}) {
+  const seed = hashSeed(crab.id);
+  const dx = (seed % 25) - 12;
+  const dy = ((seed >>> 5) % 13) - 6;
+  const duration = 7 + (seed % 5);
+  const delay = (seed % 30) / 10;
+  const inner = (
+    <div
+      style={{
+        filter: `drop-shadow(0 8px 24px ${FACTIONS[crab.faction].colors.primary}66)`,
+      }}
+    >
+      <CrabRenderer crab={crab} size="small" pose="idle" />
+    </div>
+  );
+  if (!motionAllowed) return inner;
+  return (
+    <motion.div
+      animate={{ x: [0, dx, 0], y: [0, dy, 0] }}
+      transition={{
+        duration,
+        repeat: Infinity,
+        ease: "easeInOut",
+        delay,
+      }}
+    >
+      {inner}
+    </motion.div>
   );
 }
 
