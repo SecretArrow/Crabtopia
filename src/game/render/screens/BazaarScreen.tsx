@@ -47,6 +47,7 @@ import {
   type GenesisCrab,
 } from "../../engine/genesis";
 import CrabRenderer from "../CrabRenderer";
+import GenesisReveal from "../GenesisReveal";
 import { ClassArtImage } from "../CrabArtImage";
 import ElementBadge from "../ElementBadge";
 import { resolveElement } from "../../engine/elements";
@@ -1012,6 +1013,31 @@ function GenesisPanel({
   const totalPages = Math.max(1, Math.ceil(listed.length / PAGE_SIZE));
   const safePage = Math.min(gPage, totalPages);
   const pageItems = listed.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  // Genesis reveal: the crab is created by onBuy (store purchase, fee
+  // and escrow untouched) — this only presents it. Diff the roster to
+  // find the new crab; a failed purchase reveals nothing.
+  const [revealed, setRevealed] = useState<{
+    crab: Crab;
+    genesis: GenesisCrab;
+    price: number;
+    fee: number;
+  } | null>(null);
+  const handleBuy = (g: GenesisCrab) => {
+    const before = new Set(useGame.getState().player!.crabs.map((c) => c.id));
+    if (!onBuy(g.genesisNumber)) return;
+    const child = useGame
+      .getState()
+      .player!.crabs.find((c) => !before.has(c.id));
+    if (child) {
+      const price = indexedPrice(g.price, priceIndex);
+      setRevealed({
+        crab: child,
+        genesis: g,
+        price,
+        fee: Math.round(price * CONFIG.bazaarFeePercent),
+      });
+    }
+  };
 
   return (
     <section data-testid="genesis-section" className="space-y-3">
@@ -1038,7 +1064,7 @@ function GenesisPanel({
             sold={soldSet.has(g.id)}
             playerGold={playerGold}
             priceIndex={priceIndex}
-            onBuy={() => onBuy(g.genesisNumber)}
+            onBuy={() => handleBuy(g)}
           />
         ))}
       </div>
@@ -1069,6 +1095,16 @@ function GenesisPanel({
         pays the listed price; the {CONFIG.bazaarFeePercent * 100}% bazaar fee
         is sunk from the proceeds, exactly like a normal Bazaar trade.
       </p>
+
+      {revealed && (
+        <GenesisReveal
+          crab={revealed.crab}
+          genesisNumber={revealed.genesis.genesisNumber}
+          price={revealed.price}
+          fee={revealed.fee}
+          onDone={() => setRevealed(null)}
+        />
+      )}
     </section>
   );
 }
