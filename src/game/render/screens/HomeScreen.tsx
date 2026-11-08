@@ -4,8 +4,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useGame } from "../../store/gameStore";
-import type { Crab, Team } from "../../types";
+import type { Crab, Egg, Team } from "../../types";
 import { useMotionAllowed } from "../AmbientLife";
+import HatchScene from "../HatchScene";
 import { CONFIG, QUESTS } from "../../engine/config";
 import {
   formatTime,
@@ -92,6 +93,18 @@ export default function HomeScreen() {
   const recentRaids = player.raids.slice(0, 5);
 
   const motionAllowed = useMotionAllowed();
+
+  // Hatching play-out (same as the Nursery): the child is created by
+  // hatchEggNow and the scene visualizes it — never re-rolled.
+  const [hatched, setHatched] = useState<{ egg: Egg; crab: Crab } | null>(null);
+  const handleHatch = (egg: Egg) => {
+    const before = new Set(player.crabs.map((c) => c.id));
+    hatchEggNow(egg.id);
+    const child = useGame
+      .getState()
+      .player!.crabs.find((c) => !before.has(c.id));
+    if (child) setHatched({ egg, crab: child });
+  };
 
   // Living nest: the default team's crabs (their real sprites, idle
   // clips + seeded idle variation inside LivingCrab) instead of a
@@ -289,7 +302,7 @@ export default function HomeScreen() {
                 icon={<img src="/art/crabs/egg-glowing.png" alt="" width={22} height={22} draggable={false} />}
                 title="Egg ready to hatch!"
                 actionLabel="Hatch now"
-                onAction={() => hatchEggNow(e.id)}
+                onAction={() => handleHatch(e)}
               />
             ))}
             {claimableQuests.map((q) => {
@@ -447,7 +460,7 @@ export default function HomeScreen() {
                   {isReady ? (
                     <>
                       <div className="text-[10px]" style={{ color: "#FFD166" }}>Ready!</div>
-                      <GlowButton variant="gold" size="sm" className="mt-1 w-full" onClick={() => hatchEggNow(egg.id)}>
+                      <GlowButton variant="gold" size="sm" className="mt-1 w-full" onClick={() => handleHatch(egg)}>
                         Hatch Now
                       </GlowButton>
                     </>
@@ -804,6 +817,18 @@ export default function HomeScreen() {
           />
         </div>
       </section>
+
+      {/* Hatching play-out */}
+      {hatched && (
+        <HatchScene
+          egg={hatched.egg}
+          crab={hatched.crab}
+          parents={hatched.egg.parentId
+            .map((id) => player.crabs.find((c) => c.id === id))
+            .filter((c): c is Crab => !!c)}
+          onDone={() => setHatched(null)}
+        />
+      )}
 
       {/* Modals */}
       {showQuests && <QuestsModal onClose={() => setShowQuests(false)} />}

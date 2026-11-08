@@ -23,8 +23,9 @@ import {
 } from "../ui";
 import { CONFIG } from "../../engine/config";
 import { checkBreedingEligibility, breedCost, computeGeneOdds } from "../../engine/genetics";
-import { Crab, BodyPartSlot } from "../../types";
+import { Crab, BodyPartSlot, Egg } from "../../types";
 import CrabRenderer from "../CrabRenderer";
+import HatchScene from "../HatchScene";
 import { hashSeed } from "../../animation/idleVariation";
 import CrabCard from "../CrabCard";
 import ElementBadge from "../ElementBadge";
@@ -99,6 +100,17 @@ export default function NurseryScreen() {
   const [showOdds, setShowOdds] = useState(false);
   const [sellEggId, setSellEggId] = useState<string | null>(null);
   const [sellPrice, setSellPrice] = useState(5000);
+  // Hatching play-out: the child is created by hatchEggNow (deterministic
+  // from the egg id) and the scene visualizes it — never re-rolled.
+  const [hatched, setHatched] = useState<{ egg: Egg; crab: Crab } | null>(null);
+  const handleHatch = (egg: Egg) => {
+    const before = new Set(player.crabs.map((c) => c.id));
+    hatchEggNow(egg.id);
+    const child = useGame
+      .getState()
+      .player!.crabs.find((c) => !before.has(c.id));
+    if (child) setHatched({ egg, crab: child });
+  };
 
   const crabA = player.crabs.find((c) => c.id === parentA);
   const crabB = player.crabs.find((c) => c.id === parentB);
@@ -365,7 +377,7 @@ export default function NurseryScreen() {
                   {isReady ? (
                     <>
                       <div className="text-[10px] mt-1" style={{ color: "#FFD166" }}>Ready!</div>
-                      <GlowButton variant="gold" size="sm" className="w-full mt-1" onClick={() => hatchEggNow(egg.id)}>
+                      <GlowButton variant="gold" size="sm" className="w-full mt-1" onClick={() => handleHatch(egg)}>
                         Hatch Now
                       </GlowButton>
                       <GlowButton variant="ghost" size="sm" className="w-full mt-1" onClick={() => { setSellEggId(egg.id); setSellPrice(5000); }}>
@@ -429,6 +441,18 @@ export default function NurseryScreen() {
           canAfford={player.gold >= cost}
           onConfirm={handleBreed}
           onClose={() => setShowOdds(false)}
+        />
+      )}
+
+      {/* Hatching play-out */}
+      {hatched && (
+        <HatchScene
+          egg={hatched.egg}
+          crab={hatched.crab}
+          parents={hatched.egg.parentId
+            .map((id) => player.crabs.find((c) => c.id === id))
+            .filter((c): c is Crab => !!c)}
+          onDone={() => setHatched(null)}
         />
       )}
 
