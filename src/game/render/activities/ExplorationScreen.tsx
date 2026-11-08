@@ -36,6 +36,7 @@ import { generateCrab } from "../../engine/crabs";
 import type { Crab } from "../../types";
 import TeamSelect from "../TeamSelect";
 import CrabRenderer from "../CrabRenderer";
+import LootReveal, { type LootRevealItem } from "../LootReveal";
 import { firstAvailableTeam } from "../../engine/teamEligibility";
 import {
   resolveTeamFormation,
@@ -160,6 +161,13 @@ export default function ExplorationScreen() {
   const [revealingIdx, setRevealingIdx] = useState<number | null>(null);
   const [battle, setBattle] = useState<BattleState | null>(null);
   const [trapFlash, setTrapFlash] = useState(false);
+  // Chest loot pop: the grant already happened in resolveTile (same
+  // creditGold/gainMaterials as before) — this only PRESENTS it, so
+  // closing the pop can never lose or duplicate the loot.
+  const [chestLoot, setChestLoot] = useState<{
+    gold: number;
+    mats: Partial<Record<MaterialId, number>>;
+  } | null>(null);
 
   // Expedition team: a saved team, auto-selected to the first available
   // team so a new player can explore immediately.
@@ -288,14 +296,9 @@ export default function ExplorationScreen() {
       const mats = chestMaterials(rng, matCount);
       creditGold(gold);
       gainMaterials(mats);
-      const matSummary = Object.entries(mats)
-        .map(([mid, n]) => `${MATERIALS[mid as MaterialId].icon} ×${n}`)
-        .join(" ");
-      pushToast({
-        title: "Treasure chest!",
-        description: `Found ${formatGold(gold)} gold, ${matSummary}.`,
-        variant: "success",
-      });
+      // The loot pop presents what was just granted (no toast — the
+      // pop IS the announcement).
+      setChestLoot({ gold, mats });
       setRevealingIdx(null);
     } else if (content === "enemy") {
       // Spawn an enemy crab scaled to the expedition team's level.
@@ -607,6 +610,53 @@ export default function ExplorationScreen() {
           </div>
         </GlassPanel>
       </div>
+
+      {/* Chest loot pop (grant already happened in resolveTile) */}
+      <AnimatePresence>
+        {chestLoot && (
+          <motion.div
+            data-testid="exploration-loot-pop"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(6,18,43,0.82)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <GlassPanel className="w-full max-w-sm p-4" glow="rgba(255,209,102,0.35)">
+              <LootReveal
+                title="Treasure chest!"
+                subtitle="The tide washed up something shiny."
+                variant="summary"
+                items={[
+                  {
+                    key: "gold",
+                    name: "Gold",
+                    amount: chestLoot.gold,
+                    icon: <GoldIcon size={16} />,
+                    accent: "#FFD166",
+                    amountLabel: `+${formatGold(chestLoot.gold)}`,
+                  },
+                  ...Object.entries(chestLoot.mats).map(([mid, n]) => {
+                    const m = MATERIALS[mid as MaterialId];
+                    return {
+                      key: mid,
+                      name: m.name,
+                      amount: n ?? 0,
+                      icon: <span>{m.icon}</span>,
+                      tierValue: m.baseValue,
+                    } as LootRevealItem;
+                  }),
+                ]}
+                totalLabel="Gold found"
+                totalAmount={chestLoot.gold}
+                totalIcon={<GoldIcon size={16} />}
+                actionLabel="Collect"
+                onAction={() => setChestLoot(null)}
+              />
+            </GlassPanel>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Battle overlay */}
       <AnimatePresence>
