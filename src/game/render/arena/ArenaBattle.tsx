@@ -1201,6 +1201,7 @@ export default function ArenaBattle({
               data-crab-id={c.crabId}
               data-unit-x={u.x.toFixed(1)}
               data-unit-y={u.y.toFixed(1)}
+              data-unit-alive={u.deathAt === null ? "1" : "0"}
               className="absolute"
               style={{
                 left: `${u.x}%`,
