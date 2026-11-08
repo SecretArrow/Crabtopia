@@ -20,6 +20,7 @@ import InventoryScreen from "./activities/InventoryScreen";
 import NotificationCenterModal from "./NotificationCenterModal";
 import TutorialGuide from "./TutorialGuide";
 import AnimatedNumber from "./AnimatedNumber";
+import AmbientLife from "./AmbientLife";
 import {
   applySettingsPrefs,
   loadSettingsPrefs,
@@ -280,10 +281,10 @@ export default function GameShell() {
 
       {/* Main content */}
       <main className="flex-1 overflow-x-hidden relative min-w-0">
-        {/* Plankton field on main content for desktop */}
-        <div className="hidden md:block pointer-events-none absolute inset-0 overflow-hidden z-0">
-          <PlanktonField count={8} />
-        </div>
+        {/* Ambient life layer: bubbles + motes + light rays behind the
+            screens. Skipped in battle — the arena has its own
+            presentation. (The sidebar keeps its own PlanktonField.) */}
+        {currentScreen !== "arena" && <AmbientLife />}
 
         {/* Mobile top bar */}
         <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2 safe-area-top" style={{
