@@ -190,9 +190,9 @@ export default function HomeScreen() {
                       motionAllowed={motionAllowed}
                     />
                   ))}
-                </div>
-                <div className="text-[10px] uppercase tracking-widest opacity-60 font-display">
-                  {defaultTeam!.name} · {nestCrabs.length}/5 at home
+                  <div className="w-full text-center text-[10px] uppercase tracking-widest opacity-60 font-display">
+                    {defaultTeam!.name} · {nestCrabs.length}/5 at home
+                  </div>
                 </div>
               </>
             ) : (
